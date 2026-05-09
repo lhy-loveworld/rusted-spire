@@ -1,0 +1,20 @@
+[package]
+name = "rusted-spire"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "rusted_spire"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
+serde = { version = "1", features = ["derive"] }
+
+[features]
+default = []
+python = ["pyo3"]
+
+[profile.release]
+lto = true
+codegen-units = 1
