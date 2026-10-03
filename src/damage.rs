@@ -1,4 +1,4 @@
-use crate::power::PowerState;
+use crate::power::{PowerId, PowerState};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum DamageType {
@@ -17,7 +17,12 @@ pub fn apply_powers(
 ) -> i32 {
     let mut tmp = base as f32;
 
-    for p in owner_powers {
+    // Strength precedes multiplicative outgoing modifiers regardless of the
+    // order in which powers were applied to the creature.
+    for p in owner_powers.iter().filter(|p| p.id() == PowerId::Strength) {
+        tmp = p.at_damage_give(tmp, dtype);
+    }
+    for p in owner_powers.iter().filter(|p| p.id() != PowerId::Strength) {
         tmp = p.at_damage_give(tmp, dtype);
     }
     for p in target_powers {

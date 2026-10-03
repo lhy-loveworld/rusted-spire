@@ -58,12 +58,22 @@ impl CombatState {
         let mut player = PlayerState::new(starting_hp, Self::MAX_HP, 3, deck, &mut rng.shuffle);
         player.draw(crate::player::HAND_SIZE, &mut rng.shuffle);
 
-        CombatState {
+        let mut state = CombatState {
             player,
             enemies,
             rng,
             turn: 1,
             phase: CombatPhase::PlayerTurn,
+        };
+        state.refresh_intents();
+        state
+    }
+
+    pub fn refresh_intents(&mut self) {
+        for enemy in &mut self.enemies {
+            if !enemy.is_dead() {
+                enemy.refresh_intent(&self.player.creature);
+            }
         }
     }
 }
@@ -137,6 +147,7 @@ pub fn step(state: &mut CombatState, action: Action) -> Option<CombatResult> {
             }
         }
     }
+    state.refresh_intents();
     None
 }
 
@@ -460,11 +471,19 @@ fn end_player_turn(state: &mut CombatState) {
         state.enemies[i].take_turn(&mut state.player.creature, &mut state.rng.ai);
         // Post-turn Slimed card spawning for slime enemies
         slimed_cards_for_move(enemy_id, queued_move, &mut state.player.discard_pile);
-        state.enemies[i].creature.tick_powers_end_of_turn(false);
         if state.player.creature.is_dead() {
             return;
         }
     }
+
+    // End-of-round powers run only after every enemy has acted.
+    for enemy in &mut state.enemies {
+        if !enemy.is_dead() {
+            enemy.creature.tick_powers_end_of_turn(false);
+            enemy.creature.tick_powers_end_of_round();
+        }
+    }
+    state.player.creature.tick_powers_end_of_round();
 
     state.turn += 1;
     state.player.start_turn(&mut state.rng.shuffle);

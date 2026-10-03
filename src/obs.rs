@@ -121,6 +121,7 @@ pub fn decode_action(action_idx: usize, state: &CombatState) -> Action {
 fn encode_intent(intent: &Intent) -> (f32, f32) {
     match intent {
         Intent::Attack(dmg)       => (1.0 / 6.0, *dmg as f32 / 20.0),
+        Intent::MultiAttack { damage, hits } => (1.0 / 6.0, (*damage * i32::from(*hits)) as f32 / 20.0),
         Intent::AttackDebuff(dmg) => (2.0 / 6.0, *dmg as f32 / 20.0),
         Intent::AttackDefend(dmg) => (3.0 / 6.0, *dmg as f32 / 20.0),
         Intent::Buff              => (4.0 / 6.0, 0.0),

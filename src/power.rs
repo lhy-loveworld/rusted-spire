@@ -20,7 +20,7 @@ pub trait Power: std::fmt::Debug {
     // Returns an optional (PowerId, amount) to apply to the owner after ticking.
     fn at_start_of_turn(&mut self) -> Option<(PowerId, i32)> { None }
     fn at_end_of_turn(&mut self, _is_player: bool) -> Option<(PowerId, i32)> { None }
-    fn at_end_of_round(&mut self) {}
+    fn at_end_of_round(&mut self) -> Option<(PowerId, i32)> { None }
 
     // --- card hooks ---
     // Returns a pending (PowerId, amount) to apply to the owner when a Skill is played.
@@ -38,7 +38,7 @@ pub enum PowerId {
     Ritual,
     CurlUp,
     Anger,
-    Metalicize,   // gain N block at start of turn
+    Metalicize,   // gain N block at end of turn
     DemonForm,    // gain N Strength at start of player turn
     StrengthDown, // lose N Strength at end of turn (used by Flex)
 }
@@ -222,6 +222,16 @@ impl PowerState {
             _                    => None,
         }
     }
+
+    pub fn at_end_of_round(&mut self) -> Option<(PowerId, i32)> {
+        match self {
+            PowerState::Vulnerable(p) => p.at_end_of_round(),
+            PowerState::Weak(p) => p.at_end_of_round(),
+            PowerState::Frail(p) => p.at_end_of_round(),
+            PowerState::Ritual(p) => p.at_end_of_round(),
+            _ => None,
+        }
+    }
 }
 
 // --- Strength ---
@@ -263,7 +273,7 @@ impl Power for VulnerablePower {
         }
     }
 
-    fn at_end_of_turn(&mut self, _is_player: bool) -> Option<(PowerId, i32)> {
+    fn at_end_of_round(&mut self) -> Option<(PowerId, i32)> {
         self.stacks -= 1;
         None
     }
@@ -288,7 +298,7 @@ impl Power for WeakPower {
         }
     }
 
-    fn at_end_of_turn(&mut self, _is_player: bool) -> Option<(PowerId, i32)> {
+    fn at_end_of_round(&mut self) -> Option<(PowerId, i32)> {
         self.stacks -= 1;
         None
     }
@@ -309,7 +319,7 @@ impl Power for FrailPower {
         block * 0.75
     }
 
-    fn at_end_of_turn(&mut self, _is_player: bool) -> Option<(PowerId, i32)> {
+    fn at_end_of_round(&mut self) -> Option<(PowerId, i32)> {
         self.stacks -= 1;
         None
     }
@@ -344,7 +354,7 @@ impl Power for AngerPower {
     }
 }
 
-// --- Metalicize: gain N block at start of turn (handled in trigger_start_of_turn) ---
+// --- Metalicize: gain N block at end of turn (handled by CreatureState) ---
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct MetalicizePower { pub stacks: i32 }
@@ -401,7 +411,7 @@ impl Power for RitualPower {
     fn stack(&mut self, n: i32) { self.stacks += n; }
     fn reduce(&mut self, n: i32) { self.stacks -= n; }
 
-    fn at_end_of_turn(&mut self, _is_player: bool) -> Option<(PowerId, i32)> {
+    fn at_end_of_round(&mut self) -> Option<(PowerId, i32)> {
         if self.skip_first {
             self.skip_first = false;
             None

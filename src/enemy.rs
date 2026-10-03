@@ -37,6 +37,7 @@ pub enum EnemyId {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum Intent {
     Attack(i32),
+    MultiAttack { damage: i32, hits: u8 },
     AttackDebuff(i32),
     AttackDefend(i32),
     Buff,
@@ -75,6 +76,65 @@ impl EnemyState {
         apply_pre_battle(&mut enemy.creature, id, ascension, hp_rng);
         enemy.roll_move(ai_rng, true);
         enemy
+    }
+
+
+    /// Base damage and hit count for the queued move. Shared by execution and
+    /// intent calculation, including ascension-dependent damage.
+    pub fn attack_profile(&self) -> Option<(i32, u8)> {
+        use EnemyId::*;
+        let asc = self.ascension;
+        let base = match (self.id, self.next_move) {
+            (JawWorm, JAW_WORM_CHOMP) => 11,
+            (JawWorm, JAW_WORM_THRASH) => 7,
+            (Cultist, CULTIST_DARK_STRIKE) => 6,
+            (LouseNormal | LouseDefensive, LOUSE_BITE) => self.var_damage,
+            (FungiBeast, FUNGI_BITE) => 6,
+            (AcidSlimeSmall, ACID_S_TACKLE) => if asc >= 2 { 4 } else { 3 },
+            (AcidSlimeMedium, ACID_M_SPIT) => if asc >= 2 { 8 } else { 7 },
+            (AcidSlimeMedium, ACID_M_TACKLE) => if asc >= 2 { 12 } else { 10 },
+            (SpikeSlimeSmall, SPIKE_S_TACKLE) => if asc >= 2 { 6 } else { 5 },
+            (SpikeSlimeMedium, SPIKE_M_TACKLE) => if asc >= 2 { 10 } else { 8 },
+            (MadGremlin, MAD_SCRATCH) => if asc >= 2 { 5 } else { 4 },
+            (SneakyGremlin, SNEAKY_PUNCTURE) => if asc >= 2 { 10 } else { 9 },
+            (FatGremlin, FAT_SMASH) => if asc >= 2 { 6 } else { 5 },
+            (GremlinWizard, WIZARD_ULTIMATE) => 25,
+            (GremlinNob, GREMLIN_NOB_SKULL_BASH) => if asc >= 3 { 8 } else { 6 },
+            (GremlinNob, GREMLIN_NOB_BULL_RUSH) => if asc >= 3 { 16 } else { 14 },
+            (Lagavulin, LAG_MAUL) => if asc >= 8 { 20 } else { 18 },
+            (Sentry, SENTRY_BEAM) => if asc >= 8 { 10 } else { 9 },
+            (Sentry, SENTRY_BOLT) => if asc >= 8 { 30 } else { 25 },
+            (SlimeBoss, SLIME_BOSS_SLAM) => if asc >= 3 { 42 } else { 38 },
+            (AcidSlimeLarge, ACID_M_SPIT) => if asc >= 2 { 12 } else { 11 },
+            (AcidSlimeLarge, ACID_M_TACKLE) => if asc >= 2 { 16 } else { 14 },
+            (SpikeSlimeLarge, SPIKE_M_TACKLE) => if asc >= 2 { 18 } else { 16 },
+            (TheGuardian, GUARDIAN_TAIL_WHIP) => if asc >= 3 { 9 } else { 8 },
+            (TheGuardian, GUARDIAN_WHIRLWIND) =>
+                return Some((if asc >= 3 { 6 } else { 5 }, 4)),
+            _ => return None,
+        };
+        Some((base, 1))
+    }
+
+    pub fn attack_damage(&self, player: &CreatureState) -> i32 {
+        let (base, _) = self.attack_profile().expect("queued move must be an attack");
+        apply_powers(base, DamageType::Normal, &self.creature.powers, &player.powers)
+    }
+
+    /// Refresh without rerolling the move or consuming RNG.
+    pub fn refresh_intent(&mut self, player: &CreatureState) {
+        if let Some((_, hits)) = self.attack_profile() {
+            let damage = self.attack_damage(player);
+            self.intent = if hits > 1 {
+                Intent::MultiAttack { damage, hits }
+            } else {
+                match self.intent {
+                    Intent::AttackDebuff(_) => Intent::AttackDebuff(damage),
+                    Intent::AttackDefend(_) => Intent::AttackDefend(damage),
+                    _ => Intent::Attack(damage),
+                }
+            };
+        }
     }
 
     pub fn is_dead(&self) -> bool { self.creature.is_dead() }
@@ -317,7 +377,7 @@ fn jaw_worm_get_move(roll: i32, history: &[u8], first_move: bool) -> (u8, Intent
 fn jaw_worm_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
     match enemy.next_move {
         JAW_WORM_CHOMP => {
-            let dmg = apply_powers(11, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
         }
         JAW_WORM_BELLOW => {
@@ -325,7 +385,7 @@ fn jaw_worm_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
             enemy.creature.add_block(6);
         }
         JAW_WORM_THRASH => {
-            let dmg = apply_powers(7, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
             enemy.creature.add_block(5);
         }
@@ -348,7 +408,7 @@ fn cultist_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
             enemy.creature.apply_power(PowerId::Ritual, ritual);
         }
         CULTIST_DARK_STRIKE => {
-            let dmg = apply_powers(6, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
         }
         _ => {}
@@ -373,12 +433,12 @@ fn louse_get_move(roll: i32, history: &[u8], bite_dmg: i32, is_defensive: bool) 
 fn louse_take_turn(enemy: &mut EnemyState, player: &mut CreatureState, is_defensive: bool) {
     match enemy.next_move {
         LOUSE_BITE => {
-            let dmg = apply_powers(enemy.var_damage, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
         }
         LOUSE_BUFF_DEBUFF => {
             if is_defensive {
-                player.apply_power(PowerId::Weak, 2);
+                player.apply_power_from_enemy(PowerId::Weak, 2);
             } else {
                 let str_amt = if enemy.ascension >= 17 { 4 } else { 3 };
                 enemy.creature.apply_power(PowerId::Strength, str_amt);
@@ -405,7 +465,7 @@ fn fungi_get_move(roll: i32, history: &[u8]) -> (u8, Intent) {
 fn fungi_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
     match enemy.next_move {
         FUNGI_BITE => {
-            let dmg = apply_powers(6, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
         }
         FUNGI_GROW => {
@@ -433,12 +493,11 @@ fn acid_small_get_move(roll: i32, history: &[u8]) -> (u8, Intent) {
 fn acid_small_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
     match enemy.next_move {
         ACID_S_TACKLE => {
-            let base = if enemy.ascension >= 2 { 4 } else { 3 };
-            let dmg = apply_powers(base, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
         }
         ACID_S_LICK => {
-            player.apply_power(PowerId::Weak, 1);
+            player.apply_power_from_enemy(PowerId::Weak, 1);
         }
         _ => {}
     }
@@ -467,17 +526,15 @@ fn acid_medium_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
     // here we apply the debuff/damage effects only.
     match enemy.next_move {
         ACID_M_SPIT => {
-            let base = if enemy.ascension >= 2 { 8 } else { 7 };
-            let dmg = apply_powers(base, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
-            player.apply_power(PowerId::Weak, 1);
+            player.apply_power_from_enemy(PowerId::Weak, 1);
         }
         ACID_M_LICK => {
-            player.apply_power(PowerId::Weak, 2);
+            player.apply_power_from_enemy(PowerId::Weak, 2);
         }
         ACID_M_TACKLE => {
-            let base = if enemy.ascension >= 2 { 12 } else { 10 };
-            let dmg = apply_powers(base, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
         }
         _ => {}
@@ -501,11 +558,9 @@ fn spike_small_get_move(roll: i32, history: &[u8]) -> (u8, Intent) {
 fn spike_small_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
     match enemy.next_move {
         SPIKE_S_TACKLE => {
-            let base = if enemy.ascension >= 2 { 6 } else { 5 };
-            let dmg = apply_powers(base, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
             // Add Slimed to player discard
-            player.apply_power(PowerId::Weak, 0); // placeholder — Slimed added in combat.rs
         }
         SPIKE_S_LICK => {
             // Add Slimed to player discard — handled in combat.rs via slimed_move check
@@ -531,8 +586,7 @@ fn spike_medium_get_move(roll: i32, history: &[u8]) -> (u8, Intent) {
 fn spike_medium_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
     match enemy.next_move {
         SPIKE_M_TACKLE => {
-            let base = if enemy.ascension >= 2 { 10 } else { 8 };
-            let dmg = apply_powers(base, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
         }
         SPIKE_M_LICK => { /* Slimed handled in combat.rs */ }
@@ -545,22 +599,19 @@ fn spike_medium_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
 // ---------------------------------------------------------------------------
 
 fn mad_gremlin_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
-    let base = if enemy.ascension >= 2 { 5 } else { 4 };
-    let dmg = apply_powers(base, DamageType::Normal, &enemy.creature.powers, &player.powers);
+    let dmg = enemy.attack_damage(player);
     crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
 }
 
 fn sneaky_gremlin_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
-    let base = if enemy.ascension >= 2 { 10 } else { 9 };
-    let dmg = apply_powers(base, DamageType::Normal, &enemy.creature.powers, &player.powers);
+    let dmg = enemy.attack_damage(player);
     crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
 }
 
 fn fat_gremlin_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
-    let base = if enemy.ascension >= 2 { 6 } else { 5 };
-    let dmg = apply_powers(base, DamageType::Normal, &enemy.creature.powers, &player.powers);
+    let dmg = enemy.attack_damage(player);
     crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
-    player.apply_power(PowerId::Weak, 1);
+    player.apply_power_from_enemy(PowerId::Weak, 1);
 }
 
 fn shield_gremlin_take_turn(enemy: &mut EnemyState) {
@@ -580,7 +631,7 @@ fn wizard_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
     match enemy.next_move {
         WIZARD_CHARGING => { /* charging, no effect */ }
         WIZARD_ULTIMATE => {
-            let dmg = apply_powers(25, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
             // After ultimate, reset charge history by clearing relevant entries
             enemy.move_history.retain(|&m| m != WIZARD_CHARGING);
@@ -615,14 +666,12 @@ fn gremlin_nob_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
             enemy.creature.apply_power(PowerId::Anger, anger);
         }
         GREMLIN_NOB_SKULL_BASH => {
-            let base = if enemy.ascension >= 3 { 8 } else { 6 };
-            let dmg = apply_powers(base, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
-            player.apply_power(PowerId::Vulnerable, 2);
+            player.apply_power_from_enemy(PowerId::Vulnerable, 2);
         }
         GREMLIN_NOB_BULL_RUSH => {
-            let base = if enemy.ascension >= 3 { 16 } else { 14 };
-            let dmg = apply_powers(base, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
         }
         _ => {}
@@ -652,17 +701,16 @@ fn lagavulin_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
         LAG_SLEEPING => { /* sleeping, no effect */ }
         LAG_DEBILITATE => {
             // Apply Weak 2 (simplified from -Str/-Dex which we don't have)
-            player.apply_power(PowerId::Weak, 2);
-            player.apply_power(PowerId::Frail, 2);
+            player.apply_power_from_enemy(PowerId::Weak, 2);
+            player.apply_power_from_enemy(PowerId::Frail, 2);
         }
         LAG_MAUL => {
-            let base = if enemy.ascension >= 8 { 20 } else { 18 };
-            let dmg = apply_powers(base, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
         }
         LAG_SIPHON => {
-            player.apply_power(PowerId::Weak, 1);
-            player.apply_power(PowerId::Frail, 1);
+            player.apply_power_from_enemy(PowerId::Weak, 1);
+            player.apply_power_from_enemy(PowerId::Frail, 1);
         }
         _ => {}
     }
@@ -687,13 +735,11 @@ fn sentry_get_move(history: &[u8], var_damage: i32, asc: u8) -> (u8, Intent) {
 fn sentry_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
     match enemy.next_move {
         SENTRY_BEAM => {
-            let base = if enemy.ascension >= 8 { 10 } else { 9 };
-            let dmg = apply_powers(base, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
         }
         SENTRY_BOLT => {
-            let base = if enemy.ascension >= 8 { 30 } else { 25 };
-            let dmg = apply_powers(base, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
         }
         _ => {}
@@ -724,8 +770,7 @@ fn slime_boss_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
             enemy.creature.add_block(if enemy.ascension >= 3 { 15 } else { 12 });
         }
         SLIME_BOSS_SLAM => {
-            let base = if enemy.ascension >= 3 { 42 } else { 38 };
-            let dmg = apply_powers(base, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
         }
         _ => {}
@@ -753,15 +798,13 @@ fn acid_large_get_move(roll: i32, history: &[u8]) -> (u8, Intent) {
 fn acid_large_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
     match enemy.next_move {
         ACID_M_SPIT => {
-            let base = if enemy.ascension >= 2 { 12 } else { 11 };
-            let dmg = apply_powers(base, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
-            player.apply_power(PowerId::Weak, 2);
+            player.apply_power_from_enemy(PowerId::Weak, 2);
         }
-        ACID_M_LICK => { player.apply_power(PowerId::Weak, 2); }
+        ACID_M_LICK => { player.apply_power_from_enemy(PowerId::Weak, 2); }
         ACID_M_TACKLE => {
-            let base = if enemy.ascension >= 2 { 16 } else { 14 };
-            let dmg = apply_powers(base, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
         }
         _ => {}
@@ -781,8 +824,7 @@ fn spike_large_get_move(roll: i32, history: &[u8]) -> (u8, Intent) {
 fn spike_large_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
     match enemy.next_move {
         SPIKE_M_TACKLE => {
-            let base = if enemy.ascension >= 2 { 18 } else { 16 };
-            let dmg = apply_powers(base, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
         }
         SPIKE_M_LICK => { /* Slimed handled externally */ }
@@ -811,19 +853,17 @@ fn guardian_get_move(history: &[u8], first_move: bool,
 fn guardian_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
     match enemy.next_move {
         GUARDIAN_TAIL_WHIP => {
-            let base = if enemy.ascension >= 3 { 9 } else { 8 };
-            let dmg = apply_powers(base, DamageType::Normal, &enemy.creature.powers, &player.powers);
+            let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
-            player.apply_power(PowerId::Weak, 2);
+            player.apply_power_from_enemy(PowerId::Weak, 2);
         }
         GUARDIAN_CHARGE_UP => {
             let block = if enemy.ascension >= 3 { 20 } else { 18 };
             enemy.creature.add_block(block);
         }
         GUARDIAN_WHIRLWIND => {
-            let base = if enemy.ascension >= 3 { 6 } else { 5 };
             for _ in 0..4 {
-                let dmg = apply_powers(base, DamageType::Normal, &enemy.creature.powers, &player.powers);
+                let dmg = enemy.attack_damage(player);
                 crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
                 if player.hp <= 0 { break; }
             }

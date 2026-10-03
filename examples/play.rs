@@ -205,6 +205,7 @@ fn enemy_name(id: EnemyId) -> &'static str {
 fn intent_string(intent: &Intent) -> String {
     match intent {
         Intent::Attack(dmg)       => format!("Attack {}", dmg),
+        Intent::MultiAttack { damage, hits } => format!("Attack {} x {}", damage, hits),
         Intent::AttackDebuff(dmg) => format!("Attack {} + Debuff", dmg),
         Intent::AttackDefend(dmg) => format!("Attack {} + Block", dmg),
         Intent::Buff              => "Buff".to_string(),

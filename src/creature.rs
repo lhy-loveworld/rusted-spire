@@ -11,11 +11,14 @@ pub struct CreatureState {
     pub max_hp: i32,
     pub block: i32,
     pub powers: Vec<PowerState>,
+    /// Newly applied enemy-turn debuffs skip their first end-of-round decay.
+    #[serde(default)]
+    pub fresh_debuffs: Vec<PowerId>,
 }
 
 impl CreatureState {
     pub fn new(hp: i32, max_hp: i32) -> Self {
-        CreatureState { hp, max_hp, block: 0, powers: vec![] }
+        CreatureState { hp, max_hp, block: 0, powers: vec![], fresh_debuffs: vec![] }
     }
 
     pub fn is_dead(&self) -> bool {
@@ -47,8 +50,10 @@ impl CreatureState {
     // --- power helpers ---
 
     pub fn apply_power(&mut self, id: PowerId, amount: i32) {
+        if amount == 0 { return; }
         if let Some(existing) = self.powers.iter_mut().find(|p| p.id() == id) {
             existing.stack(amount);
+            self.powers.retain(|p| p.amount() != 0);
             return;
         }
         let power = match id {
@@ -66,6 +71,14 @@ impl CreatureState {
         self.powers.push(power);
     }
 
+    pub fn apply_power_from_enemy(&mut self, id: PowerId, amount: i32) {
+        if amount > 0 && !self.has_power(id)
+            && matches!(id, PowerId::Vulnerable | PowerId::Weak | PowerId::Frail) {
+            self.fresh_debuffs.push(id);
+        }
+        self.apply_power(id, amount);
+    }
+
     pub fn has_power(&self, id: PowerId) -> bool {
         self.powers.iter().any(|p| p.id() == id)
     }
@@ -75,12 +88,8 @@ impl CreatureState {
     }
 
     /// Called at the start of this creature's turn (player or enemy).
-    /// Applies Metalicize block and any other start-of-turn power effects.
+    /// Applies start-of-turn effects such as Demon Form.
     pub fn trigger_start_of_turn(&mut self) {
-        let metal = self.power_amount(PowerId::Metalicize);
-        if metal > 0 {
-            self.add_block(metal);
-        }
         let pending: Vec<(PowerId, i32)> = self.powers.iter_mut()
             .filter_map(|p| p.at_start_of_turn())
             .collect();
@@ -119,8 +128,23 @@ impl CreatureState {
 
     /// Tick powers at end of turn; apply any pending grants (e.g. Ritual → Strength).
     pub fn tick_powers_end_of_turn(&mut self, is_player: bool) {
+        // Metallicize is power-generated block, unaffected by Frail.
+        let metal = self.power_amount(PowerId::Metalicize).max(0);
+        self.block = (self.block + metal).min(999);
         let pending: Vec<(PowerId, i32)> = self.powers.iter_mut()
             .filter_map(|p| p.at_end_of_turn(is_player))
+            .collect();
+        self.powers.retain(|p| p.amount() != 0);
+        for (id, amt) in pending {
+            self.apply_power(id, amt);
+        }
+    }
+
+    pub fn tick_powers_end_of_round(&mut self) {
+        let fresh = std::mem::take(&mut self.fresh_debuffs);
+        let pending: Vec<_> = self.powers.iter_mut()
+            .filter(|p| !fresh.contains(&p.id()))
+            .filter_map(|p| p.at_end_of_round())
             .collect();
         self.powers.retain(|p| p.amount() != 0);
         for (id, amt) in pending {
