@@ -1,5 +1,5 @@
 """
-Phase 9: First training run — MaskablePPO on Ironclad vs Jaw Worm.
+Phase 9: MaskablePPO on Ironclad vs Cultist (ascension 7 by default).
 
 Usage:
     python train.py                  # train from scratch

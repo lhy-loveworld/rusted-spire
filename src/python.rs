@@ -1,9 +1,9 @@
 use pyo3::prelude::*;
 
 use crate::card::{Card, CardId};
-use crate::combat::{step, CombatResult, CombatState};
+use crate::combat::{step, CombatPhase, CombatResult, CombatState};
 use crate::enemy::EnemyId;
-use crate::obs::{action_mask, decode_action, encode_obs, ACTION_SIZE, OBS_SIZE};
+use crate::obs::{action_mask, decode_action, encode_obs, ACTION_SIZE, MAX_ENEMIES, OBS_SIZE};
 
 /// A single Ironclad combat environment.
 ///
@@ -31,10 +31,16 @@ impl SlayEnv {
         } else {
             vec![EnemyId::Cultist]
         };
+        if enemy_ids.is_empty() || enemy_ids.len() > MAX_ENEMIES {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                format!("expected between 1 and {MAX_ENEMIES} enemies")
+            ));
+        }
         Ok(SlayEnv { state: None, enemy_ids, ascension })
     }
 
     /// Reset the environment with the given seed and optional starting HP.
+    #[pyo3(signature = (seed, hp=None))]
     pub fn reset(&mut self, seed: u64, hp: Option<i32>) -> (Vec<f32>, Vec<bool>) {
         let starting_hp = hp.unwrap_or(CombatState::MAX_HP).clamp(1, CombatState::MAX_HP);
         let state = CombatState::new(ironclad_starter(), &self.enemy_ids, seed, self.ascension, starting_hp);
@@ -50,6 +56,12 @@ impl SlayEnv {
             pyo3::exceptions::PyRuntimeError::new_err("call reset() before step()")
         })?;
 
+        if state.phase != CombatPhase::PlayerTurn {
+            return Err(pyo3::exceptions::PyRuntimeError::new_err("combat is over; call reset() before step()"));
+        }
+        if !action_mask(state).get(action_idx).copied().unwrap_or(false) {
+            return Err(pyo3::exceptions::PyValueError::new_err("illegal action: index is out of range or masked"));
+        }
         let action = decode_action(action_idx, state);
         let result = step(state, action);
 

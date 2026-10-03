@@ -12,17 +12,19 @@ Most existing Slay the Spire AI projects hook into the live Java game process vi
 
 ## Status
 
-Early development. Currently implements:
+Early development. The simulator includes 28 card/status IDs and 21 enemy IDs,
+including Act 1 elites and two bosses. Implemented content is not yet fully
+validated against the original game.
 
 | Component | Status |
 |---|---|
 | RNG (xorshift128, seeded, multiple streams) | ✅ |
 | Damage pipeline (Strength, Vulnerable, Weak, Frail) | ✅ |
 | Combat loop (player turn, enemy turn, win/lose) | ✅ |
-| Cards | Strike, Defend, Bash |
-| Enemies | Jaw Worm |
-| Python bindings (PyO3) | Planned |
-| RL training loop | Planned |
+| Cards | Ironclad basics, additional attacks/skills/powers, Slimed and Wound |
+| Enemies | Act 1 normals, gremlins, elites, Slime Boss, The Guardian |
+| Python bindings (PyO3) | `SlayEnv`, observations and action masks |
+| RL training loop | MaskablePPO script and experiment notebook; results need revalidation |
 
 See [`PLAN.md`](PLAN.md) for the full roadmap and per-item progress.
 
@@ -30,8 +32,14 @@ See [`PLAN.md`](PLAN.md) for the full roadmap and per-item progress.
 
 ## Requirements
 
-- Rust 1.75+ (`rustup` recommended)
-- Python 3.12+ with `uv` (for RL training, when bindings are ready)
+- Rust 1.85+ for edition 2024 (`rustup` recommended)
+- Python 3.12+ with `uv` for Python bindings and RL training
+
+WSL2 works for simulator development and training. Keep the checkout on the WSL
+Linux filesystem (for example, `~/rusted-spire`). Steam, Java, and a game
+installation are not required to build or run the simulator. The original game
+is useful separately for checking mechanics. Decompiled references, model
+checkpoints, and training logs are gitignored and do not transfer with a clone.
 
 ---
 
@@ -41,6 +49,37 @@ See [`PLAN.md`](PLAN.md) for the full roadmap and per-item progress.
 cargo build
 cargo test
 ```
+
+## Python setup and verification
+
+If Cargo is not on your shell's PATH after installing Rust, first run
+`source "$HOME/.cargo/env"`.
+
+```bash
+uv venv .venv --python 3.12
+source .venv/bin/activate
+uv pip install maturin
+maturin develop --release
+python -m unittest discover -s tests -v
+```
+
+The Python tests cover reset determinism, invalid actions, terminal states, and
+100 seeded random-policy episodes. They do not establish full game parity.
+
+For training, install the optional dependencies into the same environment:
+
+```bash
+uv pip install '.[train]'
+python train.py --timesteps 10000 --n-envs 2
+```
+
+`SlayEnv()` currently defaults to Cultist at ascension 7. The fixed interface has
+83 observation values and 11 actions (ten hand slots plus End Turn). Targeted
+cards automatically choose the first living enemy; target selection is not yet
+exposed to the policy. Enemy powers are encoded only for the first enemy, and
+observations have five enemy slots. Slime spawning can exceed that capacity.
+Attack intents, power timing, slime splitting, and exact Java RNG matching still
+need fidelity checks before training results can be interpreted as game skill.
 
 ---
 

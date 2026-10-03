@@ -1,0 +1,16 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "rusted-spire"
+version = "0.1.0"
+requires-python = ">=3.12"
+description = "Headless Slay the Spire combat simulator for reinforcement learning"
+
+[project.optional-dependencies]
+train = ["gymnasium", "numpy", "stable-baselines3", "sb3-contrib", "tensorboard"]
+
+[tool.maturin]
+features = ["python"]
+

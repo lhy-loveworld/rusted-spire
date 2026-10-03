@@ -2,6 +2,22 @@
 
 Headless Slay the Spire simulator in Rust, exposed to Python via PyO3, for use in Reinforcement Learning.
 
+## Resumption status (2026-10-03)
+
+The original checklist below predates the expanded implementation. Phases 7 and
+8 now have code (`src/obs.rs`, `src/python.rs`), and phase 9 has `train.py` plus
+`experiments.ipynb`. Phase 10 has partial card, power, enemy, and ascension support.
+These implementations still require behavioral validation; unchecked expansion
+items should not be interpreted as a complete inventory of missing code.
+
+Current priority: reproducible WSL/Python setup, regression tests, and combat
+correctness before further training. The first resumption fixes enemy block
+lifetime, stops enemy processing on defeat, and rejects illegal actions before
+state mutation. Remaining priorities include accurate attack intents and power
+timing, explicit multi-enemy targeting/observations, slime splitting, Gymnasium
+observation bounds and seeding, and held-out baseline evaluation. Java parity has
+not been established. See README.md for current setup and interface limits.
+
 ---
 
 ## Status Legend

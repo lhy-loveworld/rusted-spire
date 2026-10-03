@@ -1,4 +1,4 @@
-use crate::card::{card_ordinal, CARD_COUNT};
+use crate::card::{card_ordinal, is_playable, requires_target, CARD_COUNT};
 use crate::combat::{available_actions, Action, CombatState};
 use crate::enemy::Intent;
 use crate::power::PowerId;
@@ -34,7 +34,7 @@ pub fn encode_obs(state: &CombatState) -> Vec<f32> {
             obs.push(card_ordinal(card.id) as f32 / CARD_COUNT as f32);
             obs.push(card.cost as f32 / 3.0);
             obs.push(if card.upgraded { 1.0 } else { 0.0 });
-            obs.push(if card.cost <= p.energy { 1.0 } else { 0.0 });
+            obs.push(if is_playable(card.id) && card.cost <= p.energy { 1.0 } else { 0.0 });
         } else {
             obs.extend_from_slice(&[0.0, 0.0, 0.0, 0.0]);
         }
@@ -106,7 +106,11 @@ pub fn decode_action(action_idx: usize, state: &CombatState) -> Action {
         return Action::EndTurn;
     }
     let hand_idx = action_idx;
-    let target_idx = state.enemies.iter().position(|e| !e.is_dead()).unwrap_or(0);
+    let target_idx = if state.player.hand.get(hand_idx).is_some_and(|c| requires_target(c.id)) {
+        state.enemies.iter().position(|e| !e.is_dead()).unwrap_or(0)
+    } else {
+        0 // Canonical target used by available_actions for untargeted cards.
+    };
     Action::PlayCard { hand_idx, target_idx }
 }
 
@@ -123,5 +127,31 @@ fn encode_intent(intent: &Intent) -> (f32, f32) {
         Intent::Debuff            => (5.0 / 6.0, 0.0),
         Intent::Defend            => (6.0 / 6.0, 0.0),
         Intent::Unknown           => (0.0,        0.0),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::card::{Card, CardId};
+    use crate::enemy::EnemyId;
+
+    #[test]
+    fn untargeted_action_remains_legal_after_first_enemy_dies() {
+        let mut state = CombatState::new(vec![Card::new(CardId::Defend)], &[EnemyId::JawWorm, EnemyId::JawWorm], 0, 0, 80);
+        state.enemies[0].creature.hp = 0;
+        assert!(action_mask(&state)[0]);
+        assert!(available_actions(&state).contains(&decode_action(0, &state)));
+        let action = decode_action(0, &state);
+        crate::combat::step(&mut state, action);
+        assert_eq!(state.player.creature.block, 5);
+    }
+
+    #[test]
+    fn unplayable_status_is_not_observed_as_playable() {
+        let mut state = CombatState::new(vec![Card::new(CardId::Wound)], &[EnemyId::JawWorm], 0, 0, 80);
+        state.player.energy = 100;
+        assert!(!action_mask(&state)[0]);
+        assert_eq!(encode_obs(&state)[7], 0.0);
     }
 }

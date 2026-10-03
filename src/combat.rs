@@ -107,6 +107,7 @@ pub fn available_actions(state: &CombatState) -> Vec<Action> {
 
 pub fn step(state: &mut CombatState, action: Action) -> Option<CombatResult> {
     assert_eq!(state.phase, CombatPhase::PlayerTurn, "step called outside player turn");
+    assert!(available_actions(state).contains(&action), "illegal combat action");
 
     match action {
         Action::PlayCard { hand_idx, target_idx } => {
@@ -444,6 +445,12 @@ fn process_death(state: &mut CombatState, idx: usize) {
 fn end_player_turn(state: &mut CombatState) {
     state.player.creature.tick_powers_end_of_turn(true);
 
+    // Clear the previous round's block before any enemy acts. Block gained
+    // during this enemy phase must survive through the next player turn.
+    for enemy in &mut state.enemies {
+        enemy.creature.lose_block();
+    }
+
     let enemy_count = state.enemies.len();
     for i in 0..enemy_count {
         if state.enemies[i].is_dead() { continue; }
@@ -454,10 +461,9 @@ fn end_player_turn(state: &mut CombatState) {
         // Post-turn Slimed card spawning for slime enemies
         slimed_cards_for_move(enemy_id, queued_move, &mut state.player.discard_pile);
         state.enemies[i].creature.tick_powers_end_of_turn(false);
-    }
-
-    for e in &mut state.enemies {
-        e.creature.lose_block();
+        if state.player.creature.is_dead() {
+            return;
+        }
     }
 
     state.turn += 1;
@@ -539,7 +545,7 @@ mod tests {
     }
 
     #[test]
-    fn combat_can_be_won() {
+    fn combat_terminates() {
         let mut state = CombatState::new(ironclad_starter(), &[EnemyId::JawWorm], 7, 0, CombatState::MAX_HP);
         let mut turns = 0;
         loop {
@@ -554,6 +560,49 @@ mod tests {
             assert!(turns < 200, "combat did not end in 200 turns");
         }
         assert!(matches!(state.phase, CombatPhase::Over(_)));
+    }
+
+    #[test]
+    fn enemy_block_survives_until_next_enemy_phase() {
+        let mut state = CombatState::new(vec![Card::new(CardId::Strike)], &[EnemyId::JawWorm], 0, 0, 80);
+        state.enemies[0].creature.block = 20;
+        state.enemies[0].next_move = 2; // Bellow: +6 block, +3 Strength
+        step(&mut state, Action::EndTurn);
+        assert_eq!(state.enemies[0].creature.block, 6);
+        let hp = state.enemies[0].creature.hp;
+        step(&mut state, Action::PlayCard { hand_idx: 0, target_idx: 0 });
+        assert_eq!(state.enemies[0].creature.hp, hp);
+        assert_eq!(state.enemies[0].creature.block, 0);
+        state.enemies[0].creature.block = 4;
+        state.enemies[0].next_move = 1; // Chomp gains no block
+        step(&mut state, Action::EndTurn);
+        assert_eq!(state.enemies[0].creature.block, 0);
+    }
+
+    #[test]
+    fn lethal_enemy_attack_stops_round_without_drawing() {
+        let mut state = CombatState::new(ironclad_starter(), &[EnemyId::JawWorm, EnemyId::JawWorm], 0, 0, 1);
+        let draw_count = state.player.draw_pile.len();
+        assert_eq!(step(&mut state, Action::EndTurn), Some(CombatResult::Defeat));
+        assert!(state.enemies[1].move_history.is_empty());
+        assert_eq!(state.turn, 1);
+        assert_eq!(state.player.draw_pile.len(), draw_count);
+    }
+
+    #[test]
+    fn lethal_card_wins_combat() {
+        let mut state = CombatState::new(vec![Card::new(CardId::Strike)], &[EnemyId::JawWorm], 0, 0, 80);
+        state.enemies[0].creature.hp = 6;
+        assert_eq!(step(&mut state, Action::PlayCard { hand_idx: 0, target_idx: 0 }), Some(CombatResult::Victory));
+        assert!(available_actions(&state).is_empty());
+    }
+
+    #[test]
+    #[should_panic(expected = "illegal combat action")]
+    fn unaffordable_card_is_rejected() {
+        let mut state = CombatState::new(vec![Card::new(CardId::Bash)], &[EnemyId::JawWorm], 0, 0, 80);
+        state.player.energy = 1;
+        step(&mut state, Action::PlayCard { hand_idx: 0, target_idx: 0 });
     }
 
     #[test]
