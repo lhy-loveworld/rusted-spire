@@ -1,158 +1,174 @@
-use crate::card::{card_ordinal, is_playable, requires_target, CARD_COUNT};
-use crate::combat::{available_actions, Action, CombatState};
-use crate::enemy::Intent;
-use crate::power::PowerId;
+use crate::card::{card_ordinal, requires_target, CARD_COUNT};
+use crate::combat::{available_actions, Action, CombatPhase, CombatState};
+use crate::creature::CreatureState;
+use crate::enemy::{EnemyId, Intent};
+use crate::power::{PowerId, PowerState};
 
-// Fixed dimensions — must stay in sync with train.py constants.
-pub const MAX_HAND: usize = 10;
+pub const INTERFACE_VERSION: u32 = 2;
+pub const MAX_HAND: usize = crate::player::MAX_HAND;
 pub const MAX_ENEMIES: usize = 5;
+pub const TARGETS_PER_CARD: usize = MAX_ENEMIES + 1;
+pub const UNTARGETED_SLOT: usize = MAX_ENEMIES;
+pub const END_TURN_ACTION: usize = MAX_HAND * TARGETS_PER_CARD;
+pub const ACTION_SIZE: usize = END_TURN_ACTION + 1;
 
-// Breakdown:
-//   player:           4
-//   hand slots:       MAX_HAND * 4 = 40
-//   enemy slots:      MAX_ENEMIES * 5 = 25
-//   player powers:    6  (Strength, Vulnerable, Weak, Frail, Metalicize, DemonForm)
-//   enemy powers:     8  (Strength, Vulnerable, Weak, Frail, Ritual, CurlUp, Anger, Metalicize)
-pub const OBS_SIZE: usize = 4 + MAX_HAND * 4 + MAX_ENEMIES * 5 + 6 + 8;
+pub const PLAYER_FEATURES: usize = 8;
+pub const HAND_FEATURES: usize = 4;
+pub const POWER_FEATURES: usize = 14;
+pub const ENEMY_FEATURES: usize = 8 + POWER_FEATURES;
+pub const ENEMY_OFFSET: usize = PLAYER_FEATURES + MAX_HAND * HAND_FEATURES + POWER_FEATURES;
+pub const OBS_SIZE: usize = ENEMY_OFFSET + MAX_ENEMIES * ENEMY_FEATURES;
 
-pub const ACTION_SIZE: usize = MAX_HAND + 1;
-pub const END_TURN_ACTION: usize = MAX_HAND;
+const POWER_SCALES: [(PowerId, f32); 10] = [
+    (PowerId::Strength, 10.0), (PowerId::Vulnerable, 5.0),
+    (PowerId::Weak, 5.0), (PowerId::Frail, 5.0), (PowerId::Ritual, 5.0),
+    (PowerId::CurlUp, 12.0), (PowerId::Anger, 5.0), (PowerId::Metalicize, 10.0),
+    (PowerId::DemonForm, 5.0), (PowerId::StrengthDown, 10.0),
+];
+
+/// Observation slots enumerate living enemies in vector order. The same
+/// mapping is used for target actions, even after dead enemies leave holes.
+pub fn enemy_indices(state: &CombatState) -> Vec<usize> {
+    state.enemies.iter().enumerate()
+        .filter_map(|(i, enemy)| (!enemy.is_dead()).then_some(i)).collect()
+}
+
+pub fn fits_observation(state: &CombatState) -> bool {
+    enemy_indices(state).len() <= MAX_ENEMIES && state.player.hand.len() <= MAX_HAND
+}
 
 pub fn encode_obs(state: &CombatState) -> Vec<f32> {
-    let mut obs = Vec::with_capacity(OBS_SIZE);
+    assert!(fits_observation(state), "state exceeds observation capacity");
     let p = &state.player;
-
-    // --- Player (4) ---
-    obs.push(p.creature.hp as f32 / p.creature.max_hp as f32);
-    obs.push(p.creature.block as f32 / 100.0);
-    obs.push(p.energy as f32 / p.energy_master as f32);
-    obs.push(p.draw_pile.len() as f32 / 10.0);
-
-    // --- Hand slots (MAX_HAND * 4) ---
+    let mut obs = Vec::with_capacity(OBS_SIZE);
+    obs.extend_from_slice(&[
+        p.creature.hp.max(0) as f32 / p.creature.max_hp as f32,
+        p.creature.block as f32 / 100.0,
+        p.energy as f32 / p.energy_master as f32,
+        p.draw_pile.len() as f32 / 10.0,
+        p.discard_pile.len() as f32 / 10.0,
+        p.exhaust_pile.len() as f32 / 10.0,
+        p.hand.len() as f32 / MAX_HAND as f32,
+        state.turn as f32 / 100.0,
+    ]);
+    let legal = available_actions(state);
     for i in 0..MAX_HAND {
         if let Some(card) = p.hand.get(i) {
-            obs.push(card_ordinal(card.id) as f32 / CARD_COUNT as f32);
-            obs.push(card.cost as f32 / 3.0);
-            obs.push(if card.upgraded { 1.0 } else { 0.0 });
-            obs.push(if is_playable(card.id) && card.cost <= p.energy { 1.0 } else { 0.0 });
+            let playable = legal.iter().any(|a| matches!(a, Action::PlayCard { hand_idx, .. } if *hand_idx == i));
+            obs.extend_from_slice(&[
+                card_ordinal(card.id) as f32 / CARD_COUNT as f32,
+                card.cost as f32 / 3.0,
+                if card.upgraded { 1.0 } else { 0.0 },
+                if playable { 1.0 } else { 0.0 },
+            ]);
         } else {
-            obs.extend_from_slice(&[0.0, 0.0, 0.0, 0.0]);
+            obs.extend_from_slice(&[0.0; HAND_FEATURES]);
         }
     }
-
-    // --- Enemy slots (MAX_ENEMIES * 5) ---
-    for i in 0..MAX_ENEMIES {
-        if let Some(enemy) = state.enemies.get(i) {
-            if enemy.is_dead() {
-                obs.extend_from_slice(&[0.0, 0.0, 0.0, 0.0, 0.0]);
-            } else {
-                obs.push(1.0);
-                obs.push(enemy.creature.hp as f32 / enemy.creature.max_hp as f32);
-                obs.push(enemy.creature.block as f32 / 100.0);
-                let (intent_type, intent_dmg) = encode_intent(&enemy.intent);
-                obs.push(intent_type);
-                obs.push(intent_dmg);
-            }
+    encode_powers(&p.creature, &mut obs);
+    let indices = enemy_indices(state);
+    for slot in 0..MAX_ENEMIES {
+        if let Some(&idx) = indices.get(slot) {
+            let enemy = &state.enemies[idx];
+            let (kind, damage, hits) = encode_intent(&enemy.intent);
+            obs.extend_from_slice(&[
+                1.0,
+                enemy_ordinal(enemy.id) as f32 / 21.0,
+                enemy.creature.hp as f32 / enemy.creature.max_hp as f32,
+                enemy.creature.max_hp as f32 / 300.0,
+                enemy.creature.block as f32 / 100.0,
+                kind,
+                damage / 20.0,
+                hits / 4.0,
+            ]);
+            encode_powers(&enemy.creature, &mut obs);
         } else {
-            obs.extend_from_slice(&[0.0, 0.0, 0.0, 0.0, 0.0]);
+            obs.extend_from_slice(&[0.0; ENEMY_FEATURES]);
         }
     }
-
-    // --- Player powers (6) ---
-    obs.push(p.creature.power_amount(PowerId::Strength)   as f32 / 10.0);
-    obs.push(p.creature.power_amount(PowerId::Vulnerable) as f32 /  5.0);
-    obs.push(p.creature.power_amount(PowerId::Weak)       as f32 /  5.0);
-    obs.push(p.creature.power_amount(PowerId::Frail)      as f32 /  5.0);
-    obs.push(p.creature.power_amount(PowerId::Metalicize) as f32 / 10.0);
-    obs.push(p.creature.power_amount(PowerId::DemonForm)  as f32 /  5.0);
-
-    // --- First enemy powers (8) ---
-    let e = state.enemies.first();
-    obs.push(e.map(|e| e.creature.power_amount(PowerId::Strength)   as f32 / 10.0).unwrap_or(0.0));
-    obs.push(e.map(|e| e.creature.power_amount(PowerId::Vulnerable) as f32 /  5.0).unwrap_or(0.0));
-    obs.push(e.map(|e| e.creature.power_amount(PowerId::Weak)       as f32 /  5.0).unwrap_or(0.0));
-    obs.push(e.map(|e| e.creature.power_amount(PowerId::Frail)      as f32 /  5.0).unwrap_or(0.0));
-    obs.push(e.map(|e| e.creature.power_amount(PowerId::Ritual)     as f32 /  5.0).unwrap_or(0.0));
-    obs.push(e.map(|e| e.creature.power_amount(PowerId::CurlUp)     as f32 / 12.0).unwrap_or(0.0));
-    obs.push(e.map(|e| e.creature.power_amount(PowerId::Anger)      as f32 /  5.0).unwrap_or(0.0));
-    obs.push(e.map(|e| e.creature.power_amount(PowerId::Metalicize) as f32 / 12.0).unwrap_or(0.0));
-
     debug_assert_eq!(obs.len(), OBS_SIZE);
     obs
 }
 
-/// Returns a boolean mask aligned to ACTION_SIZE.
-pub fn action_mask(state: &CombatState) -> Vec<bool> {
-    let legal = available_actions(state);
-    let mut mask = vec![false; ACTION_SIZE];
+fn encode_powers(creature: &CreatureState, obs: &mut Vec<f32>) {
+    for (id, scale) in POWER_SCALES {
+        obs.push(creature.power_amount(id) as f32 / scale);
+    }
+    for id in [PowerId::Vulnerable, PowerId::Weak, PowerId::Frail] {
+        obs.push(if creature.fresh_debuffs.contains(&id) { 1.0 } else { 0.0 });
+    }
+    obs.push(if creature.powers.iter().any(|p| matches!(p, PowerState::Ritual(r) if r.skip_first)) { 1.0 } else { 0.0 });
+}
 
-    for action in &legal {
-        match action {
-            Action::EndTurn => mask[END_TURN_ACTION] = true,
-            Action::PlayCard { hand_idx, .. } => {
-                if *hand_idx < MAX_HAND {
-                    mask[*hand_idx] = true;
-                }
-            }
+/// Ten hand slots, each with five enemy targets and one untargeted action.
+pub fn action_mask(state: &CombatState) -> Vec<bool> {
+    assert!(fits_observation(state), "state exceeds observation capacity");
+    let mut mask = vec![false; ACTION_SIZE];
+    for action in available_actions(state) {
+        if let Some(index) = encode_action(&action, state) {
+            mask[index] = true;
         }
     }
     mask
 }
 
-/// Map an integer action index back to an `Action`.
-/// Always targets the first living enemy for card plays.
-pub fn decode_action(action_idx: usize, state: &CombatState) -> Action {
-    if action_idx == END_TURN_ACTION {
-        return Action::EndTurn;
+pub fn encode_action(action: &Action, state: &CombatState) -> Option<usize> {
+    match *action {
+        Action::EndTurn => Some(END_TURN_ACTION),
+        Action::PlayCard { hand_idx, target_idx } => {
+            if hand_idx >= MAX_HAND { return None; }
+            let card = state.player.hand.get(hand_idx)?;
+            let slot = if requires_target(card.id) {
+                enemy_indices(state).iter().position(|&idx| idx == target_idx)?
+            } else {
+                UNTARGETED_SLOT
+            };
+            if requires_target(card.id) && slot >= MAX_ENEMIES { return None; }
+            Some(hand_idx * TARGETS_PER_CARD + slot)
+        }
     }
-    let hand_idx = action_idx;
-    let target_idx = if state.player.hand.get(hand_idx).is_some_and(|c| requires_target(c.id)) {
-        state.enemies.iter().position(|e| !e.is_dead()).unwrap_or(0)
+}
+
+/// Decode a structural action; legality (energy, phase, status) is checked by
+/// action_mask / combat::step. Untargeted cards have only one representation.
+pub fn decode_action(index: usize, state: &CombatState) -> Option<Action> {
+    if state.phase != CombatPhase::PlayerTurn { return None; }
+    if index == END_TURN_ACTION { return Some(Action::EndTurn); }
+    if index >= END_TURN_ACTION { return None; }
+    let hand_idx = index / TARGETS_PER_CARD;
+    let slot = index % TARGETS_PER_CARD;
+    let card = state.player.hand.get(hand_idx)?;
+    let target_idx = if requires_target(card.id) {
+        if slot == UNTARGETED_SLOT { return None; }
+        *enemy_indices(state).get(slot)?
     } else {
-        0 // Canonical target used by available_actions for untargeted cards.
+        if slot != UNTARGETED_SLOT { return None; }
+        0
     };
-    Action::PlayCard { hand_idx, target_idx }
+    Some(Action::PlayCard { hand_idx, target_idx })
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-fn encode_intent(intent: &Intent) -> (f32, f32) {
-    match intent {
-        Intent::Attack(dmg)       => (1.0 / 6.0, *dmg as f32 / 20.0),
-        Intent::MultiAttack { damage, hits } => (1.0 / 6.0, (*damage * i32::from(*hits)) as f32 / 20.0),
-        Intent::AttackDebuff(dmg) => (2.0 / 6.0, *dmg as f32 / 20.0),
-        Intent::AttackDefend(dmg) => (3.0 / 6.0, *dmg as f32 / 20.0),
-        Intent::Buff              => (4.0 / 6.0, 0.0),
-        Intent::Debuff            => (5.0 / 6.0, 0.0),
-        Intent::Defend            => (6.0 / 6.0, 0.0),
-        Intent::Unknown           => (0.0,        0.0),
+fn encode_intent(intent: &Intent) -> (f32, f32, f32) {
+    match *intent {
+        Intent::Attack(d) => (1.0 / 6.0, d as f32, 1.0),
+        Intent::MultiAttack { damage, hits } => (1.0 / 6.0, damage as f32, hits as f32),
+        Intent::AttackDebuff(d) => (2.0 / 6.0, d as f32, 1.0),
+        Intent::AttackDefend(d) => (3.0 / 6.0, d as f32, 1.0),
+        Intent::Buff => (4.0 / 6.0, 0.0, 0.0),
+        Intent::Debuff => (5.0 / 6.0, 0.0, 0.0),
+        Intent::Defend => (1.0, 0.0, 0.0),
+        Intent::Unknown => (0.0, 0.0, 0.0),
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::card::{Card, CardId};
-    use crate::enemy::EnemyId;
-
-    #[test]
-    fn untargeted_action_remains_legal_after_first_enemy_dies() {
-        let mut state = CombatState::new(vec![Card::new(CardId::Defend)], &[EnemyId::JawWorm, EnemyId::JawWorm], 0, 0, 80);
-        state.enemies[0].creature.hp = 0;
-        assert!(action_mask(&state)[0]);
-        assert!(available_actions(&state).contains(&decode_action(0, &state)));
-        let action = decode_action(0, &state);
-        crate::combat::step(&mut state, action);
-        assert_eq!(state.player.creature.block, 5);
-    }
-
-    #[test]
-    fn unplayable_status_is_not_observed_as_playable() {
-        let mut state = CombatState::new(vec![Card::new(CardId::Wound)], &[EnemyId::JawWorm], 0, 0, 80);
-        state.player.energy = 100;
-        assert!(!action_mask(&state)[0]);
-        assert_eq!(encode_obs(&state)[7], 0.0);
+fn enemy_ordinal(id: EnemyId) -> u8 {
+    use EnemyId::*;
+    match id {
+        JawWorm => 1, Cultist => 2, LouseNormal => 3, LouseDefensive => 4,
+        FungiBeast => 5, AcidSlimeSmall => 6, AcidSlimeMedium => 7,
+        SpikeSlimeSmall => 8, SpikeSlimeMedium => 9, MadGremlin => 10,
+        SneakyGremlin => 11, FatGremlin => 12, ShieldGremlin => 13,
+        GremlinWizard => 14, GremlinNob => 15, Lagavulin => 16, Sentry => 17,
+        SlimeBoss => 18, AcidSlimeLarge => 19, SpikeSlimeLarge => 20, TheGuardian => 21,
     }
 }

@@ -69,17 +69,34 @@ The Python tests cover reset determinism, invalid actions, terminal states, and
 For training, install the optional dependencies into the same environment:
 
 ```bash
-uv pip install '.[train]'
+uv pip install --torch-backend cpu '.[train]'
 python train.py --timesteps 10000 --n-envs 2
+python evaluate.py --episodes 100 --enemies Cultist
 ```
 
 `SlayEnv()` currently defaults to Cultist at ascension 7. The fixed interface has
-83 observation values and 11 actions (ten hand slots plus End Turn). Targeted
-cards automatically choose the first living enemy; target selection is not yet
-exposed to the policy. Enemy powers are encoded only for the first enemy, and
-observations have five enemy slots. Slime spawning can exceed that capacity.
-Attack intents, power timing, slime splitting, and exact Java RNG matching still
-need fidelity checks before training results can be interpreted as game skill.
+**172 observation values and 61 actions** (interface v2). Targeted cards can
+select any of five living enemy slots, each with its own powers and attack
+intent. Old checkpoints require retraining. See [RL_INTERFACE.md](docs/RL_INTERFACE.md)
+for offsets, target encoding, seeding, and capacity limits.
+
+The CLI and notebook share `spire_env.SpireEnv`. For notebooks, also install
+`uv pip install '.[notebook]'` into the same environment and select that kernel.
+For a reproducible multi-enemy smoke run and held-out evaluation:
+
+```bash
+python train.py --timesteps 2048 --n-envs 2 --n-steps 64 \
+  --eval-freq 1024 --eval-episodes 20 --enemies LouseNormal LouseDefensive \
+  --save-path models/smoke_v2
+python evaluate.py --episodes 100 --enemies LouseNormal LouseDefensive
+python evaluate.py --model models/smoke_v2/final --episodes 100 \
+  --enemies LouseNormal LouseDefensive
+```
+
+GitHub Actions runs Rust/Python tests and a short masked PPO smoke test. Slime
+splitting, several enemy/card effects, and exact Java RNG matching still need
+fidelity checks before training results can be interpreted as game skill. See
+[VALIDATION.md](docs/VALIDATION.md) for tested behavior and remaining limitations.
 
 ---
 

@@ -3,7 +3,7 @@ use pyo3::prelude::*;
 use crate::card::{Card, CardId};
 use crate::combat::{step, CombatPhase, CombatResult, CombatState};
 use crate::enemy::EnemyId;
-use crate::obs::{action_mask, decode_action, encode_obs, ACTION_SIZE, MAX_ENEMIES, OBS_SIZE};
+use crate::obs::{self, action_mask, decode_action, encode_obs, ACTION_SIZE, MAX_ENEMIES, OBS_SIZE};
 
 /// A single Ironclad combat environment.
 ///
@@ -62,8 +62,17 @@ impl SlayEnv {
         if !action_mask(state).get(action_idx).copied().unwrap_or(false) {
             return Err(pyo3::exceptions::PyValueError::new_err("illegal action: index is out of range or masked"));
         }
-        let action = decode_action(action_idx, state);
-        let result = step(state, action);
+        let action = decode_action(action_idx, state).ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("action cannot be decoded")
+        })?;
+        // Preserve the previous state if a spawning encounter exceeds the
+        // fixed interface capacity; never silently hide an enemy from a policy.
+        let mut next = state.clone();
+        let result = step(&mut next, action);
+        if !obs::fits_observation(&next) {
+            return Err(pyo3::exceptions::PyValueError::new_err("action exceeds observation capacity; state unchanged"));
+        }
+        *state = next;
 
         let done = result.is_some();
         let reward = match result {
@@ -130,5 +139,16 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("OBS_SIZE",    OBS_SIZE)?;
     m.add("ACTION_SIZE", ACTION_SIZE)?;
     m.add("MAX_HP",      CombatState::MAX_HP)?;
+    m.add("INTERFACE_VERSION", obs::INTERFACE_VERSION)?;
+    m.add("MAX_HAND", obs::MAX_HAND)?;
+    m.add("MAX_ENEMIES", obs::MAX_ENEMIES)?;
+    m.add("TARGETS_PER_CARD", obs::TARGETS_PER_CARD)?;
+    m.add("UNTARGETED_SLOT", obs::UNTARGETED_SLOT)?;
+    m.add("END_TURN_ACTION", obs::END_TURN_ACTION)?;
+    m.add("PLAYER_FEATURES", obs::PLAYER_FEATURES)?;
+    m.add("HAND_FEATURES", obs::HAND_FEATURES)?;
+    m.add("ENEMY_OFFSET", obs::ENEMY_OFFSET)?;
+    m.add("ENEMY_FEATURES", obs::ENEMY_FEATURES)?;
+    m.add("CARD_COUNT", crate::card::CARD_COUNT)?;
     Ok(())
 }

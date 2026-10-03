@@ -10,6 +10,7 @@ description = "Headless Slay the Spire combat simulator for reinforcement learni
 
 [project.optional-dependencies]
 train = ["gymnasium", "numpy", "stable-baselines3", "sb3-contrib", "tensorboard"]
+notebook = ["matplotlib", "ipykernel"]
 
 [tool.maturin]
 features = ["python"]

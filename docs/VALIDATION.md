@@ -32,3 +32,27 @@ they do not validate every enemy's base damage or AI against the original game.
   of exposing a choice. Card upgrade costs and other effects need an audit.
 - Java RNG sequence parity and live-game trace comparison are not established.
 - Existing trained policies need reevaluation after combat correctness changes.
+
+## WSL validation run (2026-10-03)
+
+- `cargo test --locked`: 40 Rust tests passed.
+- `python -m unittest discover -s tests -v`: 15 Python/Gymnasium tests passed,
+  including 100 seeded random-policy episodes and notebook wrapper checks.
+- Release extension built with Python 3.12; CPU PyTorch 2.14.1+cpu and
+  stable-baselines3 / sb3-contrib 2.9.0 were used for the training smoke test.
+- MaskablePPO trained for 2,048 steps with seed 42, two subprocess environments,
+  rollout length 64, and LouseNormal + LouseDefensive at ascension 7. Checkpoint
+  saving/loading and both scheduled evaluations succeeded.
+
+Held-out evaluation used environment seeds 100000–100099 and random-policy seed
+1234, with the same encounter and ascension for both policies:
+
+| Policy | Wins | Mean surviving HP | Mean actions | Truncations |
+|---|---:|---:|---:|---:|
+| Random legal actions | 100/100 | 57.45 | 13.98 | 0 |
+| 2,048-step PPO checkpoint | 100/100 | 64.32 | 10.00 | 0 |
+
+This easy encounter is a pipeline smoke test, not evidence of broad policy
+quality or game parity. No multi-seed training comparison or uncertainty
+estimate was performed. Reproduction commands are in README.md. Checkpoints
+and TensorBoard logs remain local, under the gitignored models/ and runs/ paths.

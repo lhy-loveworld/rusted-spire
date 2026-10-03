@@ -10,13 +10,14 @@ The original checklist below predates the expanded implementation. Phases 7 and
 These implementations still require behavioral validation; unchecked expansion
 items should not be interpreted as a complete inventory of missing code.
 
-Current priority: reproducible WSL/Python setup, regression tests, and combat
-correctness before further training. The first resumption fixes enemy block
-lifetime, stops enemy processing on defeat, and rejects illegal actions before
-state mutation. Remaining priorities include accurate attack intents and power
-timing, explicit multi-enemy targeting/observations, slime splitting, Gymnasium
-observation bounds and seeding, and held-out baseline evaluation. Java parity has
-not been established. See README.md for current setup and interface limits.
+Completed in the resumption: WSL/Python setup, regression tests, enemy block
+lifetime, defeat handling, illegal-action rejection, attack intent refresh,
+turn/round power timing, explicit multi-enemy targeting and observations (v2),
+and Gymnasium seeding/truncation. Training and seeded evaluation scripts are
+available, with CI coverage. Next priorities are original-game trace comparison,
+enemy/card fidelity (especially Sentries and slime splitting), and meaningful
+held-out training experiments. Java parity has not been established. See
+README.md and docs/VALIDATION.md for setup, evidence, and interface limits.
 
 ---
 
@@ -116,34 +117,31 @@ Source: `GameActionManager`, `AbstractDungeon`, `AbstractPlayer`, `AbstractMonst
 ---
 
 ## Phase 7 — Observation & Action Encoding (RL Interface)
-- [ ] `ObsVec` struct: flat `Vec<f32>` encoding
-  - player: HP, max HP, block, energy, hand size
-  - per hand slot (up to 10): card ID (one-hot or integer), cost, is_playable
-  - per enemy slot (up to 5): HP, max HP, block, intent type, intent damage, is_alive
-  - active powers (player + enemies): type + amount
-- [ ] `ActionMask`: `Vec<bool>` aligned to action space — illegal actions masked to `false`
-- [ ] `action_count(state) -> usize` — total size of action space
-- [ ] Decide max hand size / max enemy count as constants (hand=10, enemies=5)
+- [x] Flat `Vec<f32>` encoding, 172 values in interface v2 (see docs/RL_INTERFACE.md)
+- [x] Player, hand, five living enemy slots, per-creature powers and timing flags
+- [x] `Vec<bool>` mask aligned to 61 actions, with explicit target selection
+- [x] Exported `ACTION_SIZE`, `OBS_SIZE`, and `INTERFACE_VERSION`
+- [x] Fixed hand/enemy capacities with explicit Python overflow rejection
 
 ---
 
 ## Phase 8 — Python Bindings (PyO3)
-- [ ] Add `pyo3` feature to `Cargo.toml`, configure `cdylib` crate type
-- [ ] `#[pyclass] SlayEnv`: wraps `CombatState`
-- [ ] `#[pymethods]`:
+- [x] Add `python` feature to `Cargo.toml`, configure `cdylib` crate type
+- [x] `#[pyclass] SlayEnv`: wraps `CombatState`
+- [x] `#[pymethods]`:
   - `reset(seed: u64) -> (obs, mask)`
-  - `step(action: usize) -> (obs, mask, reward, done, info)`
-  - `action_space_size() -> usize`
+  - `step(action: usize) -> (obs, mask, reward, done)`
+  - `action_size() -> usize`
   - `obs_size() -> usize`
-- [ ] Reward function (initial): `+1.0` per enemy killed, `-1.0` on defeat, small `+hp_remaining/max_hp` on victory
-- [ ] Build with `maturin develop` into the `.venv`
-- [ ] Smoke test: import in Python, run 100 random-action episodes, assert no panics
+- [x] Reward: `1 + hp_remaining/max_hp` on combat victory; `-1` on defeat; zero otherwise
+- [x] Build with `maturin develop` into the `.venv`
+- [x] Python smoke test: 100 seeded random-action episodes plus API regression tests
 
 ---
 
 ## Phase 9 — First Training Run
-- [ ] Write `train.py`: PPO via stable-baselines3, `SlayEnv` wrapped in `gymnasium.Env`
-- [ ] Enable action masking (`MaskablePPO` from `sb3-contrib`)
+- [x] Write `train.py`: shared Gymnasium wrapper, seeded subprocess training
+- [x] Enable action masking (`MaskablePPO` from `sb3-contrib`)
 - [ ] Baseline: random policy win rate on JawWorm
 - [ ] Train 1M steps, log win rate and avg HP remaining
 - [ ] Save checkpoint, plot learning curve

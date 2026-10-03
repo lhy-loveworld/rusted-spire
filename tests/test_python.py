@@ -8,6 +8,47 @@ import rusted_spire
 
 
 class SlayEnvTests(unittest.TestCase):
+    def test_versioned_interface_and_explicit_targeting(self):
+        self.assertEqual(rusted_spire.INTERFACE_VERSION, 2)
+        self.assertEqual(rusted_spire.ACTION_SIZE, 61)
+        self.assertEqual(rusted_spire.OBS_SIZE, 172)
+        env = rusted_spire.SlayEnv(enemies=["JawWorm", "JawWorm"])
+        before, mask = env.reset(42)
+        action = next(i for i, legal in enumerate(mask)
+                      if legal and i % rusted_spire.TARGETS_PER_CARD == 1)
+        after, _, _, done = env.step(action)
+        offset = rusted_spire.ENEMY_OFFSET
+        self.assertFalse(done)
+        self.assertEqual(after[offset + 2], before[offset + 2])
+        self.assertLess(after[offset + rusted_spire.ENEMY_FEATURES + 2],
+                        before[offset + rusted_spire.ENEMY_FEATURES + 2])
+
+    def test_spawn_overflow_rejects_action_without_mutation(self):
+        enemies = ["AcidSlimeMedium"] + ["ShieldGremlin"] * 4
+        env = rusted_spire.SlayEnv(enemies=enemies, ascension=0)
+        reference = rusted_spire.SlayEnv(enemies=enemies, ascension=0)
+        _, mask = env.reset(42)
+        reference.reset(42)
+        for _ in range(100):
+            attacks = [i for i, legal in enumerate(mask)
+                       if legal and i != rusted_spire.END_TURN_ACTION
+                       and i % rusted_spire.TARGETS_PER_CARD == 0]
+            action = attacks[0] if attacks else rusted_spire.END_TURN_ACTION
+            try:
+                result = env.step(action)
+            except ValueError as error:
+                self.assertIn("capacity", str(error))
+                with self.assertRaises(ValueError):
+                    env.step(action)
+                self.assertEqual(env.step(rusted_spire.END_TURN_ACTION),
+                                 reference.step(rusted_spire.END_TURN_ACTION))
+                break
+            self.assertEqual(result, reference.step(action))
+            _, mask, _, done = result
+            self.assertFalse(done)
+        else:
+            self.fail("expected a split to exceed observation capacity")
+
     def test_reset_is_reproducible(self):
         env = rusted_spire.SlayEnv()
         initial = env.reset(42)

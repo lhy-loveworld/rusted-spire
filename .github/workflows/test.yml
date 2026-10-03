@@ -1,0 +1,29 @@
+name: Tests
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  combat-and-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.12'
+      - name: Rust tests
+        run: |
+          rustup toolchain install stable --profile minimal
+          cargo +stable test --locked
+      - name: Python and Gymnasium tests
+        run: |
+          uv venv .venv
+          uv pip install --python .venv/bin/python --torch-backend cpu -e '.[train]'
+          .venv/bin/python -m unittest discover -s tests -v
+      - name: Masked PPO smoke test
+        run: >-
+          .venv/bin/python train.py --timesteps 256 --n-envs 2 --n-steps 32
+          --eval-freq 128 --eval-episodes 4 --enemies LouseNormal LouseDefensive
+          --save-path models/ci_smoke
