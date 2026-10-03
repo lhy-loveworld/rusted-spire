@@ -8,12 +8,12 @@ name = "rusted_spire"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
+pyo3 = { version = "0.23", features = ["extension-module"], optional = true }
 serde = { version = "1", features = ["derive"] }
 
 [features]
 default = []
-python = ["pyo3"]
+python = ["dep:pyo3"]
 
 [profile.release]
 lto = true

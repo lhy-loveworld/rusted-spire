@@ -12,7 +12,7 @@ fn main() {
         .unwrap_or(42);
 
     let deck = ironclad_starter();
-    let mut state = CombatState::new(deck, &[EnemyId::JawWorm], seed);
+    let mut state = CombatState::new(deck, &[EnemyId::JawWorm], seed, 0, CombatState::MAX_HP);
 
     println!("=== Rusted Spire ===  (seed {})\n", seed);
 
@@ -144,26 +144,73 @@ fn prompt(actions: &[Action]) -> Action {
 
 fn card_name(id: CardId, upgraded: bool) -> String {
     let base = match id {
-        CardId::Strike => "Strike",
-        CardId::Defend => "Defend",
-        CardId::Bash   => "Bash",
+        CardId::Strike        => "Strike",
+        CardId::Defend        => "Defend",
+        CardId::Bash          => "Bash",
+        CardId::TwinStrike    => "Twin Strike",
+        CardId::IronWave      => "Iron Wave",
+        CardId::Cleave        => "Cleave",
+        CardId::Clothesline   => "Clothesline",
+        CardId::HeavyBlade    => "Heavy Blade",
+        CardId::BodySlam      => "Body Slam",
+        CardId::Thunderclap   => "Thunderclap",
+        CardId::PommelStrike  => "Pommel Strike",
+        CardId::Anger         => "Anger",
+        CardId::WildStrike    => "Wild Strike",
+        CardId::SwordBoomerang=> "Sword Boomerang",
+        CardId::Dropkick      => "Dropkick",
+        CardId::ShrugItOff    => "Shrug It Off",
+        CardId::TrueGrit      => "True Grit",
+        CardId::Flex          => "Flex",
+        CardId::Intimidate    => "Intimidate",
+        CardId::Armaments     => "Armaments",
+        CardId::Warcry        => "Warcry",
+        CardId::Headbutt      => "Headbutt",
+        CardId::Entrench      => "Entrench",
+        CardId::Inflame       => "Inflame",
+        CardId::Metallicize   => "Metallicize",
+        CardId::DemonForm     => "Demon Form",
+        CardId::Slimed        => "Slimed",
+        CardId::Wound         => "Wound",
     };
     if upgraded { format!("{}+", base) } else { base.to_string() }
 }
 
 fn enemy_name(id: EnemyId) -> &'static str {
     match id {
-        EnemyId::JawWorm => "Jaw Worm",
+        EnemyId::JawWorm         => "Jaw Worm",
+        EnemyId::Cultist         => "Cultist",
+        EnemyId::LouseNormal     => "Louse (Normal)",
+        EnemyId::LouseDefensive  => "Louse (Defensive)",
+        EnemyId::FungiBeast      => "Fungi Beast",
+        EnemyId::AcidSlimeSmall  => "Acid Slime (S)",
+        EnemyId::AcidSlimeMedium => "Acid Slime (M)",
+        EnemyId::SpikeSlimeSmall => "Spike Slime (S)",
+        EnemyId::SpikeSlimeMedium=> "Spike Slime (M)",
+        EnemyId::MadGremlin      => "Mad Gremlin",
+        EnemyId::SneakyGremlin   => "Sneaky Gremlin",
+        EnemyId::FatGremlin      => "Fat Gremlin",
+        EnemyId::ShieldGremlin   => "Shield Gremlin",
+        EnemyId::GremlinWizard   => "Gremlin Wizard",
+        EnemyId::GremlinNob      => "Gremlin Nob",
+        EnemyId::Lagavulin       => "Lagavulin",
+        EnemyId::Sentry          => "Sentry",
+        EnemyId::SlimeBoss       => "Slime Boss",
+        EnemyId::AcidSlimeLarge  => "Acid Slime (L)",
+        EnemyId::SpikeSlimeLarge => "Spike Slime (L)",
+        EnemyId::TheGuardian     => "The Guardian",
     }
 }
 
 fn intent_string(intent: &Intent) -> String {
     match intent {
         Intent::Attack(dmg)       => format!("Attack {}", dmg),
+        Intent::AttackDebuff(dmg) => format!("Attack {} + Debuff", dmg),
         Intent::AttackDefend(dmg) => format!("Attack {} + Block", dmg),
         Intent::Buff              => "Buff".to_string(),
+        Intent::Debuff            => "Debuff".to_string(),
         Intent::Defend            => "Defend".to_string(),
-        Intent::Unknown           => "Unknown".to_string(),
+        Intent::Unknown           => "Unknown/Sleeping".to_string(),
     }
 }
 

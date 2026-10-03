@@ -1,4 +1,7 @@
-use crate::power::{PowerId, PowerState};
+use crate::power::{
+    PowerId, PowerState,
+    MetalicizePower, DemonFormPower, StrengthDownPower,
+};
 use crate::damage::{apply_block_powers, deal_damage, DamageType};
 
 /// Shared state for both players and enemies.
@@ -11,8 +14,8 @@ pub struct CreatureState {
 }
 
 impl CreatureState {
-    pub fn new(hp: i32) -> Self {
-        CreatureState { hp, max_hp: hp, block: 0, powers: vec![] }
+    pub fn new(hp: i32, max_hp: i32) -> Self {
+        CreatureState { hp, max_hp, block: 0, powers: vec![] }
     }
 
     pub fn is_dead(&self) -> bool {
@@ -53,6 +56,12 @@ impl CreatureState {
             PowerId::Vulnerable => PowerState::Vulnerable(crate::power::VulnerablePower { stacks: amount }),
             PowerId::Weak       => PowerState::Weak(crate::power::WeakPower { stacks: amount }),
             PowerId::Frail      => PowerState::Frail(crate::power::FrailPower { stacks: amount }),
+            PowerId::Ritual      => PowerState::Ritual(crate::power::RitualPower { stacks: amount, skip_first: true }),
+            PowerId::CurlUp      => PowerState::CurlUp(crate::power::CurlUpPower { block: amount, triggered: false }),
+            PowerId::Anger       => PowerState::Anger(crate::power::AngerPower { stacks: amount }),
+            PowerId::Metalicize  => PowerState::Metalicize(MetalicizePower { stacks: amount }),
+            PowerId::DemonForm   => PowerState::DemonForm(DemonFormPower { stacks: amount }),
+            PowerId::StrengthDown=> PowerState::StrengthDown(StrengthDownPower { stacks: amount }),
         };
         self.powers.push(power);
     }
@@ -65,11 +74,57 @@ impl CreatureState {
         self.powers.iter().find(|p| p.id() == id).map(|p| p.amount()).unwrap_or(0)
     }
 
-    /// Tick down turn-based debuffs at end of turn.
-    pub fn tick_powers_end_of_turn(&mut self, is_player: bool) {
+    /// Called at the start of this creature's turn (player or enemy).
+    /// Applies Metalicize block and any other start-of-turn power effects.
+    pub fn trigger_start_of_turn(&mut self) {
+        let metal = self.power_amount(PowerId::Metalicize);
+        if metal > 0 {
+            self.add_block(metal);
+        }
+        let pending: Vec<(PowerId, i32)> = self.powers.iter_mut()
+            .filter_map(|p| p.at_start_of_turn())
+            .collect();
+        for (id, amt) in pending {
+            self.apply_power(id, amt);
+        }
+    }
+
+    /// Called after this creature takes Normal damage; triggers CurlUp if conditions met.
+    pub fn trigger_on_attacked(&mut self, hp_lost: i32, dtype: DamageType) {
+        if dtype != DamageType::Normal || hp_lost <= 0 || self.is_dead() {
+            return;
+        }
+        let mut curl_block = 0i32;
         for p in &mut self.powers {
-            p.at_end_of_turn(is_player);
+            if p.id() == PowerId::CurlUp && p.amount() > 0 {
+                curl_block += p.amount();
+                p.reduce(1); // sets triggered=true → amount()=0 → retain removes it
+            }
         }
         self.powers.retain(|p| p.amount() != 0);
+        if curl_block > 0 {
+            self.add_block(curl_block);
+        }
+    }
+
+    /// Called when the player plays a Skill card; triggers Anger → Strength gain.
+    pub fn trigger_on_skill_played(&mut self) {
+        let pending: Vec<(PowerId, i32)> = self.powers.iter_mut()
+            .filter_map(|p| p.on_play_card(true))
+            .collect();
+        for (id, amt) in pending {
+            self.apply_power(id, amt);
+        }
+    }
+
+    /// Tick powers at end of turn; apply any pending grants (e.g. Ritual → Strength).
+    pub fn tick_powers_end_of_turn(&mut self, is_player: bool) {
+        let pending: Vec<(PowerId, i32)> = self.powers.iter_mut()
+            .filter_map(|p| p.at_end_of_turn(is_player))
+            .collect();
+        self.powers.retain(|p| p.amount() != 0);
+        for (id, amt) in pending {
+            self.apply_power(id, amt);
+        }
     }
 }

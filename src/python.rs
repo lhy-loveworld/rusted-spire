@@ -1,0 +1,122 @@
+use pyo3::prelude::*;
+
+use crate::card::{Card, CardId};
+use crate::combat::{step, CombatResult, CombatState};
+use crate::enemy::EnemyId;
+use crate::obs::{action_mask, decode_action, encode_obs, ACTION_SIZE, OBS_SIZE};
+
+/// A single Ironclad combat environment.
+///
+/// Python usage:
+///     env = SlayEnv()                                 # default: Cultist, Asc 7
+///     env = SlayEnv(enemies=["Sentry","Sentry","Sentry"], ascension=7)
+///     obs, mask = env.reset(seed=42)
+///     obs, mask, reward, done = env.step(action)
+#[pyclass]
+pub struct SlayEnv {
+    state: Option<CombatState>,
+    enemy_ids: Vec<EnemyId>,
+    ascension: u8,
+}
+
+#[pymethods]
+impl SlayEnv {
+    #[new]
+    #[pyo3(signature = (enemy=None, enemies=None, ascension=7))]
+    pub fn new(enemy: Option<&str>, enemies: Option<Vec<String>>, ascension: u8) -> PyResult<Self> {
+        let enemy_ids = if let Some(list) = enemies {
+            list.iter().map(|s| parse_enemy_id(s)).collect::<PyResult<_>>()?
+        } else if let Some(e) = enemy {
+            vec![parse_enemy_id(e)?]
+        } else {
+            vec![EnemyId::Cultist]
+        };
+        Ok(SlayEnv { state: None, enemy_ids, ascension })
+    }
+
+    /// Reset the environment with the given seed and optional starting HP.
+    pub fn reset(&mut self, seed: u64, hp: Option<i32>) -> (Vec<f32>, Vec<bool>) {
+        let starting_hp = hp.unwrap_or(CombatState::MAX_HP).clamp(1, CombatState::MAX_HP);
+        let state = CombatState::new(ironclad_starter(), &self.enemy_ids, seed, self.ascension, starting_hp);
+        let obs  = encode_obs(&state);
+        let mask = action_mask(&state);
+        self.state = Some(state);
+        (obs, mask)
+    }
+
+    /// Step the environment with the given action index.
+    pub fn step(&mut self, action_idx: usize) -> PyResult<(Vec<f32>, Vec<bool>, f32, bool)> {
+        let state = self.state.as_mut().ok_or_else(|| {
+            pyo3::exceptions::PyRuntimeError::new_err("call reset() before step()")
+        })?;
+
+        let action = decode_action(action_idx, state);
+        let result = step(state, action);
+
+        let done = result.is_some();
+        let reward = match result {
+            Some(CombatResult::Victory) => {
+                1.0 + (state.player.creature.hp as f32 / state.player.creature.max_hp as f32)
+            }
+            Some(CombatResult::Defeat) => -1.0,
+            None => 0.0,
+        };
+
+        let obs  = encode_obs(state);
+        let mask = if done { vec![false; ACTION_SIZE] } else { action_mask(state) };
+
+        Ok((obs, mask, reward, done))
+    }
+
+    #[staticmethod]
+    pub fn obs_size() -> usize { OBS_SIZE }
+
+    #[staticmethod]
+    pub fn action_size() -> usize { ACTION_SIZE }
+}
+
+fn parse_enemy_id(s: &str) -> PyResult<EnemyId> {
+    match s {
+        "JawWorm"         => Ok(EnemyId::JawWorm),
+        "Cultist"         => Ok(EnemyId::Cultist),
+        "LouseNormal"     => Ok(EnemyId::LouseNormal),
+        "LouseDefensive"  => Ok(EnemyId::LouseDefensive),
+        "FungiBeast"      => Ok(EnemyId::FungiBeast),
+        "AcidSlimeSmall"  => Ok(EnemyId::AcidSlimeSmall),
+        "AcidSlimeMedium" => Ok(EnemyId::AcidSlimeMedium),
+        "SpikeSlimeSmall" => Ok(EnemyId::SpikeSlimeSmall),
+        "SpikeSlimeMedium"=> Ok(EnemyId::SpikeSlimeMedium),
+        "MadGremlin"      => Ok(EnemyId::MadGremlin),
+        "SneakyGremlin"   => Ok(EnemyId::SneakyGremlin),
+        "FatGremlin"      => Ok(EnemyId::FatGremlin),
+        "ShieldGremlin"   => Ok(EnemyId::ShieldGremlin),
+        "GremlinWizard"   => Ok(EnemyId::GremlinWizard),
+        "GremlinNob"      => Ok(EnemyId::GremlinNob),
+        "Lagavulin"       => Ok(EnemyId::Lagavulin),
+        "Sentry"          => Ok(EnemyId::Sentry),
+        "SlimeBoss"       => Ok(EnemyId::SlimeBoss),
+        "AcidSlimeLarge"  => Ok(EnemyId::AcidSlimeLarge),
+        "SpikeSlimeLarge" => Ok(EnemyId::SpikeSlimeLarge),
+        "TheGuardian"     => Ok(EnemyId::TheGuardian),
+        other => Err(pyo3::exceptions::PyValueError::new_err(
+            format!("unknown enemy: {other}")
+        )),
+    }
+}
+
+fn ironclad_starter() -> Vec<Card> {
+    let mut deck = vec![];
+    for _ in 0..5 { deck.push(Card::new(CardId::Strike)); }
+    for _ in 0..4 { deck.push(Card::new(CardId::Defend)); }
+    deck.push(Card::new(CardId::Bash));
+    deck
+}
+
+/// Register classes and constants into the Python module.
+pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<SlayEnv>()?;
+    m.add("OBS_SIZE",    OBS_SIZE)?;
+    m.add("ACTION_SIZE", ACTION_SIZE)?;
+    m.add("MAX_HP",      CombatState::MAX_HP)?;
+    Ok(())
+}

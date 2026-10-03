@@ -17,11 +17,11 @@ pub struct PlayerState {
 }
 
 impl PlayerState {
-    pub fn new(hp: i32, energy: i32, deck: Vec<Card>, shuffle_rng: &mut Rng) -> Self {
+    pub fn new(hp: i32, max_hp: i32, energy: i32, deck: Vec<Card>, shuffle_rng: &mut Rng) -> Self {
         let mut draw_pile = deck;
         shuffle(&mut draw_pile, shuffle_rng);
         PlayerState {
-            creature: CreatureState::new(hp),
+            creature: CreatureState::new(hp, max_hp),
             energy,
             energy_master: energy,
             hand: vec![],
@@ -64,6 +64,7 @@ impl PlayerState {
     /// Called at the start of each player turn.
     pub fn start_turn(&mut self, shuffle_rng: &mut Rng) {
         self.creature.lose_block();
+        self.creature.trigger_start_of_turn(); // DemonForm Strength, etc.
         self.energy = self.energy_master;
         self.discard_hand(shuffle_rng);
         self.draw(HAND_SIZE, shuffle_rng);

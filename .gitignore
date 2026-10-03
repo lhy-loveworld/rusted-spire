@@ -1,2 +1,9 @@
 /target
-/decompiled
+/decompiled/*
+!/decompiled/INDEX.md
+.ipynb_checkpoints/
+__pycache__/
+/.venv/
+/models/
+/runs/
+/logs/
