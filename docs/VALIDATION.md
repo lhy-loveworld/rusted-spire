@@ -123,8 +123,10 @@ checkpoints/logs, and compares them with uniform legal-action baselines on
 matched held-out seeds. It records per-episode outcomes, remaining enemy HP,
 Wilson win-rate intervals, package versions, Git revision and checkpoint hashes.
 Intervals describe evaluation-seed uncertainty for each policy, not training
-variance. Training seeds are reported separately. Benchmark results are recorded
-separately after completion; passing tests alone is not evidence of learning.
+variance. Training seeds are reported separately. The completed
+[v4 comparison](TRAINING_V4.md) found 0/300 wins for each of six final PPO
+checkpoints and each random baseline, with no truncations. Longer episodes
+did not translate into wins. Passing tests alone is not evidence of learning.
 
 ## WSL validation run (2026-10-03, interface v3)
 

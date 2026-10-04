@@ -23,7 +23,11 @@ Constructor ordering now separates creation, initial moves and pre-battle rolls.
 Lagavulin and Guardian have source-derived mechanics tests; interface v4 exposes
 their new powers (196 observations / 61 actions). Next priorities are controlled
 combat traces, remaining enemy AI/card choice audits, and multi-seed held-out
-training comparisons. Full Java combat parity has not been established. See
+training comparisons. The first v4 comparison completed six 65,536-step runs:
+all final checkpoints and random baselines won 0/300 held-out fights per run.
+Next learning work should test a curriculum/tactical baseline and reward design,
+not assume more steps at the same settings will solve the encounters. See
+docs/TRAINING_V4.md. Full Java combat parity has not been established. See
 README.md and docs/VALIDATION.md for setup, evidence, and interface limits.
 
 ---

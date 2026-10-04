@@ -107,6 +107,11 @@ and encounter constructor RNG ordering now have source-derived tests. Interface
 v4 exposes Dexterity, Mode Shift and Sharp Hide; v3 policies require retraining.
 See [ELITE_BOSS_AUDIT.md](docs/ELITE_BOSS_AUDIT.md) for scope and reference paths.
 
+The first [multi-seed v4 training comparison](docs/TRAINING_V4.md) completed six
+65,536-step PPO runs against Lagavulin/Guardian. Every final policy and matched
+random baseline won 0/300 held-out fights; longer survival did not establish
+improved win rate. Checkpoints and detailed logs remain local.
+
 ---
 
 ## Play Interactively

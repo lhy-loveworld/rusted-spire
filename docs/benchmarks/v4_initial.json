@@ -1,0 +1,601 @@
+{
+  "revision": "fbc1c70986f91c32bd00378e8ef333c55f6b2217",
+  "protocol": {
+    "encounters": [
+      "Lagavulin",
+      "TheGuardian"
+    ],
+    "train_seeds": [
+      11,
+      22,
+      33
+    ],
+    "timesteps": 65536,
+    "episodes": 300,
+    "start_seed": 200000,
+    "ascension": 0,
+    "output": "models/benchmark_v4_initial"
+  },
+  "checkpoint_selection": "final, never selected using held-out results",
+  "raw_results_sha256": "8ff5a9c554c5b6cde6e75ccb0a4e8580e58a052205c82899fd493653ca8a0bf4",
+  "results": [
+    {
+      "interface_version": 4,
+      "episodes": 300,
+      "start_seed": 200000,
+      "policy_seed": 11,
+      "wins": 0,
+      "win_rate": 0.0,
+      "truncations": 0,
+      "win_rate_wilson95": [
+        8.673617379884035e-19,
+        0.012642971224546034
+      ],
+      "mean_reward": -1.0,
+      "mean_steps": 28.993333333333332,
+      "mean_hp_on_victory": null,
+      "mean_enemy_hp_remaining": 52.54666754047076,
+      "encounter": "Lagavulin",
+      "policy": "random"
+    },
+    {
+      "interface_version": 4,
+      "episodes": 300,
+      "start_seed": 200000,
+      "policy_seed": 11,
+      "wins": 0,
+      "win_rate": 0.0,
+      "truncations": 0,
+      "win_rate_wilson95": [
+        8.673617379884035e-19,
+        0.012642971224546034
+      ],
+      "mean_reward": -1.0,
+      "mean_steps": 52.70333333333333,
+      "mean_hp_on_victory": null,
+      "mean_enemy_hp_remaining": 57.44666727701823,
+      "encounter": "Lagavulin",
+      "policy": "ppo_final",
+      "training_seed": 11,
+      "checkpoint_sha256": "14705c5fa0b81feb760cdb7f15f2e47e8fb4451163b92103b74430e6313fce97",
+      "training_metadata": {
+        "interface_version": 4,
+        "obs_size": 196,
+        "action_size": 61,
+        "training": {
+          "timesteps": 65536.0,
+          "n_envs": 2,
+          "save_path": "models/benchmark_v4_initial/Lagavulin_11",
+          "seed": 11,
+          "enemies": [
+            "Lagavulin"
+          ],
+          "ascension": 0,
+          "n_steps": 128,
+          "eval_freq": 65536,
+          "eval_episodes": 20
+        },
+        "revision": "fbc1c70986f91c32bd00378e8ef333c55f6b2217",
+        "tracked_changes": false,
+        "packages": {
+          "torch": "2.14.1+cpu",
+          "stable-baselines3": "2.9.0",
+          "sb3-contrib": "2.9.0",
+          "gymnasium": "1.3.0",
+          "numpy": "2.5.3"
+        }
+      },
+      "training_seconds": 32.4
+    },
+    {
+      "interface_version": 4,
+      "episodes": 300,
+      "start_seed": 200000,
+      "policy_seed": 22,
+      "wins": 0,
+      "win_rate": 0.0,
+      "truncations": 0,
+      "win_rate_wilson95": [
+        8.673617379884035e-19,
+        0.012642971224546034
+      ],
+      "mean_reward": -1.0,
+      "mean_steps": 28.85333333333333,
+      "mean_hp_on_victory": null,
+      "mean_enemy_hp_remaining": 53.383334178924564,
+      "encounter": "Lagavulin",
+      "policy": "random"
+    },
+    {
+      "interface_version": 4,
+      "episodes": 300,
+      "start_seed": 200000,
+      "policy_seed": 22,
+      "wins": 0,
+      "win_rate": 0.0,
+      "truncations": 0,
+      "win_rate_wilson95": [
+        8.673617379884035e-19,
+        0.012642971224546034
+      ],
+      "mean_reward": -1.0,
+      "mean_steps": 52.92333333333333,
+      "mean_hp_on_victory": null,
+      "mean_enemy_hp_remaining": 57.36000108083089,
+      "encounter": "Lagavulin",
+      "policy": "ppo_final",
+      "training_seed": 22,
+      "checkpoint_sha256": "a51a14c2136b0c551c8c3332e8a8ebcbcc4d9d2dcc3a90f557e9d0f3edbb2697",
+      "training_metadata": {
+        "interface_version": 4,
+        "obs_size": 196,
+        "action_size": 61,
+        "training": {
+          "timesteps": 65536.0,
+          "n_envs": 2,
+          "save_path": "models/benchmark_v4_initial/Lagavulin_22",
+          "seed": 22,
+          "enemies": [
+            "Lagavulin"
+          ],
+          "ascension": 0,
+          "n_steps": 128,
+          "eval_freq": 65536,
+          "eval_episodes": 20
+        },
+        "revision": "fbc1c70986f91c32bd00378e8ef333c55f6b2217",
+        "tracked_changes": false,
+        "packages": {
+          "torch": "2.14.1+cpu",
+          "stable-baselines3": "2.9.0",
+          "sb3-contrib": "2.9.0",
+          "gymnasium": "1.3.0",
+          "numpy": "2.5.3"
+        }
+      },
+      "training_seconds": 32.8
+    },
+    {
+      "interface_version": 4,
+      "episodes": 300,
+      "start_seed": 200000,
+      "policy_seed": 33,
+      "wins": 0,
+      "win_rate": 0.0,
+      "truncations": 0,
+      "win_rate_wilson95": [
+        8.673617379884035e-19,
+        0.012642971224546034
+      ],
+      "mean_reward": -1.0,
+      "mean_steps": 28.55666666666667,
+      "mean_hp_on_victory": null,
+      "mean_enemy_hp_remaining": 54.48666767120361,
+      "encounter": "Lagavulin",
+      "policy": "random"
+    },
+    {
+      "interface_version": 4,
+      "episodes": 300,
+      "start_seed": 200000,
+      "policy_seed": 33,
+      "wins": 0,
+      "win_rate": 0.0,
+      "truncations": 0,
+      "win_rate_wilson95": [
+        8.673617379884035e-19,
+        0.012642971224546034
+      ],
+      "mean_reward": -1.0,
+      "mean_steps": 52.973333333333336,
+      "mean_hp_on_victory": null,
+      "mean_enemy_hp_remaining": 57.21666758219401,
+      "encounter": "Lagavulin",
+      "policy": "ppo_final",
+      "training_seed": 33,
+      "checkpoint_sha256": "d6ecbee49f9fac661f0fdb0baec7648745e1b16f97379714cea33a27f8e62d72",
+      "training_metadata": {
+        "interface_version": 4,
+        "obs_size": 196,
+        "action_size": 61,
+        "training": {
+          "timesteps": 65536.0,
+          "n_envs": 2,
+          "save_path": "models/benchmark_v4_initial/Lagavulin_33",
+          "seed": 33,
+          "enemies": [
+            "Lagavulin"
+          ],
+          "ascension": 0,
+          "n_steps": 128,
+          "eval_freq": 65536,
+          "eval_episodes": 20
+        },
+        "revision": "fbc1c70986f91c32bd00378e8ef333c55f6b2217",
+        "tracked_changes": false,
+        "packages": {
+          "torch": "2.14.1+cpu",
+          "stable-baselines3": "2.9.0",
+          "sb3-contrib": "2.9.0",
+          "gymnasium": "1.3.0",
+          "numpy": "2.5.3"
+        }
+      },
+      "training_seconds": 32.3
+    },
+    {
+      "interface_version": 4,
+      "episodes": 300,
+      "start_seed": 200000,
+      "policy_seed": 11,
+      "wins": 0,
+      "win_rate": 0.0,
+      "truncations": 0,
+      "win_rate_wilson95": [
+        8.673617379884035e-19,
+        0.012642971224546034
+      ],
+      "mean_reward": -1.0,
+      "mean_steps": 22.266666666666666,
+      "mean_hp_on_victory": null,
+      "mean_enemy_hp_remaining": 197.20667068481444,
+      "encounter": "TheGuardian",
+      "policy": "random"
+    },
+    {
+      "interface_version": 4,
+      "episodes": 300,
+      "start_seed": 200000,
+      "policy_seed": 11,
+      "wins": 0,
+      "win_rate": 0.0,
+      "truncations": 0,
+      "win_rate_wilson95": [
+        8.673617379884035e-19,
+        0.012642971224546034
+      ],
+      "mean_reward": -1.0,
+      "mean_steps": 39.36,
+      "mean_hp_on_victory": null,
+      "mean_enemy_hp_remaining": 198.01333892822265,
+      "encounter": "TheGuardian",
+      "policy": "ppo_final",
+      "training_seed": 11,
+      "checkpoint_sha256": "5f92d4fec0a82773a4894863822c8ac081b09d912b6251714c1662a8ebb91bfe",
+      "training_metadata": {
+        "interface_version": 4,
+        "obs_size": 196,
+        "action_size": 61,
+        "training": {
+          "timesteps": 65536.0,
+          "n_envs": 2,
+          "save_path": "models/benchmark_v4_initial/TheGuardian_11",
+          "seed": 11,
+          "enemies": [
+            "TheGuardian"
+          ],
+          "ascension": 0,
+          "n_steps": 128,
+          "eval_freq": 65536,
+          "eval_episodes": 20
+        },
+        "revision": "fbc1c70986f91c32bd00378e8ef333c55f6b2217",
+        "tracked_changes": false,
+        "packages": {
+          "torch": "2.14.1+cpu",
+          "stable-baselines3": "2.9.0",
+          "sb3-contrib": "2.9.0",
+          "gymnasium": "1.3.0",
+          "numpy": "2.5.3"
+        }
+      },
+      "training_seconds": 31.5
+    },
+    {
+      "interface_version": 4,
+      "episodes": 300,
+      "start_seed": 200000,
+      "policy_seed": 22,
+      "wins": 0,
+      "win_rate": 0.0,
+      "truncations": 0,
+      "win_rate_wilson95": [
+        8.673617379884035e-19,
+        0.012642971224546034
+      ],
+      "mean_reward": -1.0,
+      "mean_steps": 21.993333333333332,
+      "mean_hp_on_victory": null,
+      "mean_enemy_hp_remaining": 199.10333704630534,
+      "encounter": "TheGuardian",
+      "policy": "random"
+    },
+    {
+      "interface_version": 4,
+      "episodes": 300,
+      "start_seed": 200000,
+      "policy_seed": 22,
+      "wins": 0,
+      "win_rate": 0.0,
+      "truncations": 0,
+      "win_rate_wilson95": [
+        8.673617379884035e-19,
+        0.012642971224546034
+      ],
+      "mean_reward": -1.0,
+      "mean_steps": 39.36,
+      "mean_hp_on_victory": null,
+      "mean_enemy_hp_remaining": 198.01333892822265,
+      "encounter": "TheGuardian",
+      "policy": "ppo_final",
+      "training_seed": 22,
+      "checkpoint_sha256": "215719e8c1f435dca9819cc819756086bc2a1b67606e1a9cb56cd600021b3d94",
+      "training_metadata": {
+        "interface_version": 4,
+        "obs_size": 196,
+        "action_size": 61,
+        "training": {
+          "timesteps": 65536.0,
+          "n_envs": 2,
+          "save_path": "models/benchmark_v4_initial/TheGuardian_22",
+          "seed": 22,
+          "enemies": [
+            "TheGuardian"
+          ],
+          "ascension": 0,
+          "n_steps": 128,
+          "eval_freq": 65536,
+          "eval_episodes": 20
+        },
+        "revision": "fbc1c70986f91c32bd00378e8ef333c55f6b2217",
+        "tracked_changes": false,
+        "packages": {
+          "torch": "2.14.1+cpu",
+          "stable-baselines3": "2.9.0",
+          "sb3-contrib": "2.9.0",
+          "gymnasium": "1.3.0",
+          "numpy": "2.5.3"
+        }
+      },
+      "training_seconds": 31.7
+    },
+    {
+      "interface_version": 4,
+      "episodes": 300,
+      "start_seed": 200000,
+      "policy_seed": 33,
+      "wins": 0,
+      "win_rate": 0.0,
+      "truncations": 0,
+      "win_rate_wilson95": [
+        8.673617379884035e-19,
+        0.012642971224546034
+      ],
+      "mean_reward": -1.0,
+      "mean_steps": 21.95,
+      "mean_hp_on_victory": null,
+      "mean_enemy_hp_remaining": 197.5433364868164,
+      "encounter": "TheGuardian",
+      "policy": "random"
+    },
+    {
+      "interface_version": 4,
+      "episodes": 300,
+      "start_seed": 200000,
+      "policy_seed": 33,
+      "wins": 0,
+      "win_rate": 0.0,
+      "truncations": 0,
+      "win_rate_wilson95": [
+        8.673617379884035e-19,
+        0.012642971224546034
+      ],
+      "mean_reward": -1.0,
+      "mean_steps": 39.28,
+      "mean_hp_on_victory": null,
+      "mean_enemy_hp_remaining": 197.59333943684896,
+      "encounter": "TheGuardian",
+      "policy": "ppo_final",
+      "training_seed": 33,
+      "checkpoint_sha256": "a19d1a57ddb54a67b09adf43d2554abc25dd41fdf4fff5860c48a65c29b9b03c",
+      "training_metadata": {
+        "interface_version": 4,
+        "obs_size": 196,
+        "action_size": 61,
+        "training": {
+          "timesteps": 65536.0,
+          "n_envs": 2,
+          "save_path": "models/benchmark_v4_initial/TheGuardian_33",
+          "seed": 33,
+          "enemies": [
+            "TheGuardian"
+          ],
+          "ascension": 0,
+          "n_steps": 128,
+          "eval_freq": 65536,
+          "eval_episodes": 20
+        },
+        "revision": "fbc1c70986f91c32bd00378e8ef333c55f6b2217",
+        "tracked_changes": false,
+        "packages": {
+          "torch": "2.14.1+cpu",
+          "stable-baselines3": "2.9.0",
+          "sb3-contrib": "2.9.0",
+          "gymnasium": "1.3.0",
+          "numpy": "2.5.3"
+        }
+      },
+      "training_seconds": 31.6
+    }
+  ],
+  "diagnostic_replay": [
+    {
+      "encounter": "Lagavulin",
+      "policy": "random",
+      "seed": 11,
+      "episodes": 20,
+      "start_seed": 200000,
+      "mean_final_turn": 9.85,
+      "mean_action_counts": {
+        "Strike": 10.15,
+        "Defend": 7.35,
+        "EndTurn": 9.85,
+        "Bash": 1.4
+      }
+    },
+    {
+      "encounter": "Lagavulin",
+      "policy": "ppo_final",
+      "seed": 11,
+      "episodes": 20,
+      "start_seed": 200000,
+      "mean_final_turn": 13.4,
+      "mean_action_counts": {
+        "Defend": 26.4,
+        "EndTurn": 13.4,
+        "Strike": 12.8,
+        "Bash": 0.5
+      }
+    },
+    {
+      "encounter": "Lagavulin",
+      "policy": "random",
+      "seed": 22,
+      "episodes": 20,
+      "start_seed": 200000,
+      "mean_final_turn": 9.7,
+      "mean_action_counts": {
+        "Defend": 7.7,
+        "EndTurn": 9.7,
+        "Strike": 9.8,
+        "Bash": 1.25
+      }
+    },
+    {
+      "encounter": "Lagavulin",
+      "policy": "ppo_final",
+      "seed": 22,
+      "episodes": 20,
+      "start_seed": 200000,
+      "mean_final_turn": 13.7,
+      "mean_action_counts": {
+        "Defend": 27.0,
+        "EndTurn": 13.7,
+        "Strike": 12.9,
+        "Bash": 0.6
+      }
+    },
+    {
+      "encounter": "Lagavulin",
+      "policy": "random",
+      "seed": 33,
+      "episodes": 20,
+      "start_seed": 200000,
+      "mean_final_turn": 10.15,
+      "mean_action_counts": {
+        "EndTurn": 10.15,
+        "Defend": 8.25,
+        "Strike": 9.85,
+        "Bash": 1.6
+      }
+    },
+    {
+      "encounter": "Lagavulin",
+      "policy": "ppo_final",
+      "seed": 33,
+      "episodes": 20,
+      "start_seed": 200000,
+      "mean_final_turn": 13.7,
+      "mean_action_counts": {
+        "Defend": 27.0,
+        "EndTurn": 13.7,
+        "Strike": 12.5,
+        "Bash": 0.8
+      }
+    },
+    {
+      "encounter": "TheGuardian",
+      "policy": "random",
+      "seed": 11,
+      "episodes": 20,
+      "start_seed": 200000,
+      "mean_final_turn": 7.85,
+      "mean_action_counts": {
+        "Strike": 7.3,
+        "Defend": 6.65,
+        "EndTurn": 7.85,
+        "Bash": 1.25
+      }
+    },
+    {
+      "encounter": "TheGuardian",
+      "policy": "ppo_final",
+      "seed": 11,
+      "episodes": 20,
+      "start_seed": 200000,
+      "mean_final_turn": 10.15,
+      "mean_action_counts": {
+        "Defend": 20.2,
+        "EndTurn": 10.15,
+        "Strike": 9.15,
+        "Bash": 0.55
+      }
+    },
+    {
+      "encounter": "TheGuardian",
+      "policy": "random",
+      "seed": 22,
+      "episodes": 20,
+      "start_seed": 200000,
+      "mean_final_turn": 7.4,
+      "mean_action_counts": {
+        "Defend": 5.3,
+        "EndTurn": 7.3,
+        "Strike": 7.3,
+        "Bash": 0.8
+      }
+    },
+    {
+      "encounter": "TheGuardian",
+      "policy": "ppo_final",
+      "seed": 22,
+      "episodes": 20,
+      "start_seed": 200000,
+      "mean_final_turn": 10.15,
+      "mean_action_counts": {
+        "Defend": 20.2,
+        "EndTurn": 10.15,
+        "Strike": 9.15,
+        "Bash": 0.55
+      }
+    },
+    {
+      "encounter": "TheGuardian",
+      "policy": "random",
+      "seed": 33,
+      "episodes": 20,
+      "start_seed": 200000,
+      "mean_final_turn": 8.15,
+      "mean_action_counts": {
+        "EndTurn": 8.05,
+        "Defend": 7.35,
+        "Strike": 7.5,
+        "Bash": 1.35
+      }
+    },
+    {
+      "encounter": "TheGuardian",
+      "policy": "ppo_final",
+      "seed": 33,
+      "episodes": 20,
+      "start_seed": 200000,
+      "mean_final_turn": 9.65,
+      "mean_action_counts": {
+        "Defend": 19.25,
+        "EndTurn": 9.65,
+        "Strike": 8.4,
+        "Bash": 0.65
+      }
+    }
+  ]
+}
