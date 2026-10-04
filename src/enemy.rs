@@ -44,6 +44,8 @@ pub enum Intent {
     Debuff,
     Defend,
     Split,
+    Sleep,
+    Stun,
     Unknown,
 }
 
@@ -57,14 +59,26 @@ pub struct EnemyState {
     pub move_history: Vec<u8>,
     pub intent: Intent,
     pub death_processed: bool,
+    pub asleep: bool,
+    pub idle_turns: u8,
+    pub mode_shift_threshold: i32,
+    pub mode_shift_pending: bool,
 }
 
 impl EnemyState {
     pub fn new(id: EnemyId, ascension: u8, hp_rng: &mut Rng, ai_rng: &mut Rng) -> Self {
+        let mut enemy = Self::construct(id, ascension, hp_rng);
+        enemy.roll_move(ai_rng, true);
+        enemy.pre_battle(hp_rng);
+        enemy
+    }
+
+    /// Construct all monsters before rolling moves and running pre-battle hooks.
+    pub(crate) fn construct(id: EnemyId, ascension: u8, hp_rng: &mut Rng) -> Self {
         let (hp_min, hp_max) = hp_range(id, ascension);
         let hp = hp_rng.random_range(hp_min, hp_max);
         let var_damage = extra_damage_roll(id, ascension, hp_rng);
-        let mut enemy = EnemyState {
+        EnemyState {
             id,
             creature: CreatureState::new(hp, hp),
             ascension,
@@ -73,10 +87,20 @@ impl EnemyState {
             move_history: vec![],
             intent: Intent::Unknown,
             death_processed: false,
-        };
-        apply_pre_battle(&mut enemy.creature, id, ascension, hp_rng);
-        enemy.roll_move(ai_rng, true);
-        enemy
+            asleep: id == EnemyId::Lagavulin,
+            idle_turns: 0,
+            mode_shift_threshold: if id == EnemyId::TheGuardian {
+                if ascension >= 19 { 40 } else if ascension >= 9 { 35 } else { 30 }
+            } else { 0 },
+            mode_shift_pending: false,
+        }
+    }
+
+    pub(crate) fn pre_battle(&mut self, hp_rng: &mut Rng) {
+        apply_pre_battle(&mut self.creature, self.id, self.ascension, hp_rng);
+        if self.id == EnemyId::TheGuardian {
+            self.creature.apply_power(PowerId::ModeShift, self.mode_shift_threshold);
+        }
     }
 
 
@@ -102,15 +126,16 @@ impl EnemyState {
             (GremlinWizard, WIZARD_ULTIMATE) => 25,
             (GremlinNob, GREMLIN_NOB_SKULL_BASH) => if asc >= 3 { 8 } else { 6 },
             (GremlinNob, GREMLIN_NOB_BULL_RUSH) => if asc >= 3 { 16 } else { 14 },
-            (Lagavulin, LAG_MAUL) => if asc >= 8 { 20 } else { 18 },
+            (Lagavulin, LAG_MAUL) => if asc >= 3 { 20 } else { 18 },
             (Sentry, SENTRY_BEAM) => if asc >= 3 { 10 } else { 9 },
             (SlimeBoss, SLIME_BOSS_SLAM) => if asc >= 4 { 38 } else { 35 },
             (AcidSlimeLarge, ACID_M_SPIT) => if asc >= 2 { 12 } else { 11 },
             (AcidSlimeLarge, ACID_M_TACKLE) => if asc >= 2 { 18 } else { 16 },
             (SpikeSlimeLarge, SPIKE_M_TACKLE) => if asc >= 2 { 18 } else { 16 },
-            (TheGuardian, GUARDIAN_TAIL_WHIP) => if asc >= 3 { 9 } else { 8 },
-            (TheGuardian, GUARDIAN_WHIRLWIND) =>
-                return Some((if asc >= 3 { 6 } else { 5 }, 4)),
+            (TheGuardian, GUARDIAN_FIERCE_BASH) => if asc >= 4 { 36 } else { 32 },
+            (TheGuardian, GUARDIAN_ROLL) => if asc >= 4 { 10 } else { 9 },
+            (TheGuardian, GUARDIAN_TWIN_SLAM) => return Some((8, 2)),
+            (TheGuardian, GUARDIAN_WHIRLWIND) => return Some((5, 4)),
             _ => return None,
         };
         Some((base, 1))
@@ -141,6 +166,10 @@ impl EnemyState {
 
     pub fn roll_move(&mut self, ai_rng: &mut Rng, first_move: bool) {
         let roll = ai_rng.random_int(99);
+        if self.id == EnemyId::Lagavulin {
+            (self.next_move, self.intent) = lagavulin_get_move(self);
+            return;
+        }
         let (mv, intent) = get_move(self.id, roll, &self.move_history, first_move, &self.creature, self.var_damage, self.ascension, ai_rng);
         self.next_move = mv;
         self.intent = intent;
@@ -163,7 +192,49 @@ impl EnemyState {
                 EnemyId::SlimeBoss => {
                     (self.next_move, self.intent) = slime_boss_get_move(&self.move_history, false, self.ascension);
                 }
+                EnemyId::TheGuardian => {
+                    (self.next_move, self.intent) = guardian_next_move(self);
+                }
+                EnemyId::Lagavulin if self.next_move == LAG_SLEEPING && self.idle_turns == 3 => {
+                    // Third idle queues SetMoveAction, not RollMoveAction.
+                    self.next_move = LAG_MAUL;
+                    self.intent = Intent::Attack(if self.ascension >= 3 { 20 } else { 18 });
+                }
                 _ => self.roll_move(ai_rng, false),
+            }
+        }
+    }
+
+    /// React to actual HP loss. Guardian's queued block resolves after the card,
+    /// so later hits of the same attack still land before it closes up.
+    pub fn on_hp_lost(&mut self, hp_lost: i32) {
+        if hp_lost <= 0 || self.is_dead() { return; }
+        if self.id == EnemyId::Lagavulin && self.asleep {
+            self.asleep = false;
+            self.creature.powers.retain(|p| p.id() != PowerId::Metalicize);
+            self.next_move = LAG_STUN;
+            self.intent = Intent::Stun;
+        }
+        let remaining = self.creature.power_amount(PowerId::ModeShift);
+        if self.id == EnemyId::TheGuardian && remaining > 0 && !self.mode_shift_pending {
+            if hp_lost >= remaining {
+                self.creature.powers.retain(|p| p.id() != PowerId::ModeShift);
+                self.mode_shift_pending = true;
+            } else {
+                self.creature.apply_power(PowerId::ModeShift, -hp_lost);
+            }
+        }
+    }
+
+    pub fn resolve_card_reactions(&mut self) {
+        if self.mode_shift_pending {
+            self.mode_shift_pending = false;
+            if !self.is_dead() {
+                self.mode_shift_threshold += 10;
+                // GainBlockAction is power-generated, not card block.
+                self.creature.block = (self.creature.block + 20).min(999);
+                self.next_move = GUARDIAN_CLOSE_UP;
+                self.intent = Intent::Buff;
             }
         }
     }
@@ -215,6 +286,7 @@ impl EnemyState {
                 id, creature: CreatureState::new(self.creature.hp, self.creature.hp),
                 ascension: self.ascension, var_damage: 0, next_move: 0,
                 move_history: vec![], intent: Intent::Unknown, death_processed: false,
+                asleep: false, idle_turns: 0, mode_shift_threshold: 0, mode_shift_pending: false,
             };
             child.roll_move(ai_rng, true);
             child
@@ -241,14 +313,14 @@ fn hp_range(id: EnemyId, asc: u8) -> (i32, i32) {
         EnemyId::SneakyGremlin  => if asc >= 7 { (11, 15) } else { (10, 14) },
         EnemyId::FatGremlin     => if asc >= 7 { (14, 18) } else { (13, 17) },
         EnemyId::ShieldGremlin  => if asc >= 7 { (13, 17) } else { (12, 15) },
-        EnemyId::GremlinWizard  => if asc >= 7 { (24, 26) } else { (23, 25) },
+        EnemyId::GremlinWizard  => if asc >= 7 { (22, 26) } else { (21, 25) },
         EnemyId::GremlinNob     => if asc >= 8 { (85, 90) } else { (82, 86) },
-        EnemyId::Lagavulin      => if asc >= 8 { (112, 115) } else { (109, 112) },
+        EnemyId::Lagavulin      => if asc >= 8 { (112, 115) } else { (109, 111) },
         EnemyId::Sentry         => if asc >= 8 { (39, 45) } else { (38, 42) },
         EnemyId::SlimeBoss      => if asc >= 9 { (150, 150) } else { (140, 140) },
         EnemyId::AcidSlimeLarge => if asc >= 7 { (68, 72) } else { (65, 69) },
         EnemyId::SpikeSlimeLarge=> if asc >= 7 { (67, 73) } else { (64, 70) },
-        EnemyId::TheGuardian    => if asc >= 3 { (250, 250) } else { (235, 250) },
+        EnemyId::TheGuardian    => if asc >= 9 { (250, 250) } else { (240, 240) },
     }
 }
 
@@ -270,8 +342,8 @@ fn apply_pre_battle(creature: &mut CreatureState, id: EnemyId, asc: u8, rng: &mu
             creature.apply_power(PowerId::CurlUp, curl);
         }
         EnemyId::Lagavulin => {
-            let metal = if asc >= 15 { 10 } else { 8 };
-            creature.apply_power(PowerId::Metalicize, metal);
+            creature.block = 8;
+            creature.apply_power(PowerId::Metalicize, 8);
         }
         _ => {}
     }
@@ -317,7 +389,7 @@ const WIZARD_ULTIMATE:  u8 = 2;
 const LAG_SLEEPING:   u8 = 10;
 const LAG_DEBILITATE: u8 = 11;
 const LAG_MAUL:       u8 = 12;
-const LAG_SIPHON:     u8 = 13;
+const LAG_STUN:       u8 = 13;
 
 const SENTRY_BEAM: u8 = 1;
 const SENTRY_BOLT: u8 = 2;
@@ -327,9 +399,13 @@ const SLIME_BOSS_PREPARING: u8 = 2;
 const SLIME_BOSS_SLAM:      u8 = 3;
 const SLIME_SPLIT:          u8 = 4;
 
-const GUARDIAN_TAIL_WHIP:  u8 = 1;
-const GUARDIAN_CHARGE_UP:  u8 = 2;
-const GUARDIAN_WHIRLWIND:  u8 = 3;
+const GUARDIAN_CLOSE_UP:    u8 = 1;
+const GUARDIAN_FIERCE_BASH: u8 = 2;
+const GUARDIAN_ROLL:        u8 = 3;
+const GUARDIAN_TWIN_SLAM:   u8 = 4;
+const GUARDIAN_WHIRLWIND:   u8 = 5;
+const GUARDIAN_CHARGE_UP:   u8 = 6;
+const GUARDIAN_VENT:        u8 = 7;
 
 // ---------------------------------------------------------------------------
 // Move routing
@@ -353,12 +429,12 @@ fn get_move(id: EnemyId, roll: i32, history: &[u8], first_move: bool,
         EnemyId::ShieldGremlin  => (SHIELD_PROTECT,  Intent::Defend),
         EnemyId::GremlinWizard  => wizard_get_move(history),
         EnemyId::GremlinNob     => gremlin_nob_get_move(roll, history, first_move, creature, asc),
-        EnemyId::Lagavulin      => lagavulin_get_move(history, first_move, creature, asc),
+        EnemyId::Lagavulin      => unreachable!("Lagavulin uses its sleep state"),
         EnemyId::Sentry         => sentry_get_move(history, asc),
         EnemyId::SlimeBoss      => slime_boss_get_move(history, first_move, asc),
         EnemyId::AcidSlimeLarge => acid_get_move(roll, history, asc, true, ai_rng),
         EnemyId::SpikeSlimeLarge=> spike_get_move(roll, history, asc, true),
-        EnemyId::TheGuardian    => guardian_get_move(history, first_move, creature, asc),
+        EnemyId::TheGuardian    => (GUARDIAN_CHARGE_UP, Intent::Defend),
     }
 }
 
@@ -735,39 +811,37 @@ fn gremlin_nob_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
 }
 
 // ---------------------------------------------------------------------------
-// Lagavulin (Elite) — Metalicize 8, sleeps 2 turns then attacks
+// Lagavulin (sleeping elite encounter)
 // ---------------------------------------------------------------------------
 
-fn lagavulin_get_move(history: &[u8], first_move: bool,
-                      creature: &CreatureState, asc: u8) -> (u8, Intent) {
-    let sleep_count = history.iter().filter(|&&m| m == LAG_SLEEPING).count();
-    if first_move || sleep_count < 2 {
-        return (LAG_SLEEPING, Intent::Unknown);
+fn lagavulin_get_move(enemy: &EnemyState) -> (u8, Intent) {
+    if enemy.asleep { return (LAG_SLEEPING, Intent::Sleep); }
+    if enemy.move_history.ends_with(&[LAG_MAUL, LAG_MAUL]) {
+        (LAG_DEBILITATE, Intent::Debuff)
+    } else {
+        (LAG_MAUL, Intent::Attack(if enemy.ascension >= 3 { 20 } else { 18 }))
     }
-    let str_bonus = creature.power_amount(PowerId::Strength);
-    let maul_dmg = (if asc >= 8 { 20 } else { 18 }) + str_bonus;
-    let last = history.last().copied().unwrap_or(LAG_SLEEPING);
-    if last == LAG_SLEEPING { return (LAG_DEBILITATE, Intent::Debuff); }
-    if last == LAG_DEBILITATE || last == LAG_SIPHON { return (LAG_MAUL, Intent::Attack(maul_dmg)); }
-    (LAG_SIPHON, Intent::Debuff)
 }
 
 fn lagavulin_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
     match enemy.next_move {
-        LAG_SLEEPING => { /* sleeping, no effect */ }
+        LAG_SLEEPING => {
+            enemy.idle_turns += 1;
+            if enemy.idle_turns == 3 {
+                enemy.asleep = false;
+                enemy.creature.powers.retain(|p| p.id() != PowerId::Metalicize);
+            }
+        }
         LAG_DEBILITATE => {
-            // Apply Weak 2 (simplified from -Str/-Dex which we don't have)
-            player.apply_power_from_enemy(PowerId::Weak, 2);
-            player.apply_power_from_enemy(PowerId::Frail, 2);
+            let amount = if enemy.ascension >= 18 { -2 } else { -1 };
+            player.apply_power(PowerId::Dexterity, amount);
+            player.apply_power(PowerId::Strength, amount);
         }
         LAG_MAUL => {
             let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
         }
-        LAG_SIPHON => {
-            player.apply_power_from_enemy(PowerId::Weak, 1);
-            player.apply_power_from_enemy(PowerId::Frail, 1);
-        }
+        LAG_STUN => {}
         _ => {}
     }
 }
@@ -858,39 +932,46 @@ fn spike_large_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
 }
 
 // ---------------------------------------------------------------------------
-// The Guardian (Boss — simplified, no Mode Shift)
+// The Guardian: direct move transitions, with queued Mode Shift interruption.
 // ---------------------------------------------------------------------------
 
-fn guardian_get_move(history: &[u8], first_move: bool,
-                     creature: &CreatureState, asc: u8) -> (u8, Intent) {
-    let str_bonus  = creature.power_amount(PowerId::Strength);
-    let whirl_dmg  = (if asc >= 3 { 6 } else { 5 }) + str_bonus;
-    let twip_dmg   = (if asc >= 3 { 9 } else { 8 }) + str_bonus;
-    if first_move { return (GUARDIAN_TAIL_WHIP, Intent::AttackDebuff(twip_dmg)); }
-    let cycle = history.len() % 3;
-    match cycle {
-        0 => (GUARDIAN_TAIL_WHIP, Intent::AttackDebuff(twip_dmg)),
-        1 => (GUARDIAN_CHARGE_UP, Intent::Defend),
-        _ => (GUARDIAN_WHIRLWIND, Intent::Attack(whirl_dmg * 4)),
+fn guardian_next_move(enemy: &EnemyState) -> (u8, Intent) {
+    match enemy.next_move {
+        GUARDIAN_CHARGE_UP => (GUARDIAN_FIERCE_BASH, Intent::Attack(if enemy.ascension >= 4 { 36 } else { 32 })),
+        GUARDIAN_FIERCE_BASH => (GUARDIAN_VENT, Intent::Debuff),
+        GUARDIAN_VENT | GUARDIAN_TWIN_SLAM => (GUARDIAN_WHIRLWIND, Intent::MultiAttack { damage: 5, hits: 4 }),
+        GUARDIAN_WHIRLWIND => (GUARDIAN_CHARGE_UP, Intent::Defend),
+        GUARDIAN_CLOSE_UP => (GUARDIAN_ROLL, Intent::Attack(if enemy.ascension >= 4 { 10 } else { 9 })),
+        GUARDIAN_ROLL => (GUARDIAN_TWIN_SLAM, Intent::MultiAttack { damage: 8, hits: 2 }),
+        _ => unreachable!("invalid Guardian move"),
     }
 }
 
 fn guardian_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
     match enemy.next_move {
-        GUARDIAN_TAIL_WHIP => {
-            let dmg = enemy.attack_damage(player);
-            crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
+        GUARDIAN_VENT => {
             player.apply_power_from_enemy(PowerId::Weak, 2);
+            player.apply_power_from_enemy(PowerId::Vulnerable, 2);
         }
         GUARDIAN_CHARGE_UP => {
-            let block = if enemy.ascension >= 3 { 20 } else { 18 };
-            enemy.creature.add_block(block);
+            enemy.creature.block = (enemy.creature.block + 9).min(999);
         }
-        GUARDIAN_WHIRLWIND => {
-            for _ in 0..4 {
+        GUARDIAN_CLOSE_UP => {
+            enemy.creature.apply_power(PowerId::SharpHide, if enemy.ascension >= 19 { 4 } else { 3 });
+        }
+        GUARDIAN_FIERCE_BASH | GUARDIAN_ROLL | GUARDIAN_WHIRLWIND | GUARDIAN_TWIN_SLAM => {
+            if enemy.next_move == GUARDIAN_TWIN_SLAM {
+                enemy.creature.apply_power(PowerId::ModeShift, enemy.mode_shift_threshold);
+                enemy.creature.lose_block();
+            }
+            let (_, hits) = enemy.attack_profile().unwrap();
+            for _ in 0..hits {
                 let dmg = enemy.attack_damage(player);
                 crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
                 if player.hp <= 0 { break; }
+            }
+            if enemy.next_move == GUARDIAN_TWIN_SLAM {
+                enemy.creature.powers.retain(|p| p.id() != PowerId::SharpHide);
             }
         }
         _ => {}

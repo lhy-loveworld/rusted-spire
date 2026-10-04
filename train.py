@@ -3,6 +3,8 @@
 import argparse
 import json
 import time
+import subprocess
+from importlib.metadata import version
 from pathlib import Path
 
 import torch
@@ -42,6 +44,9 @@ def main():
         "obs_size": rusted_spire.OBS_SIZE,
         "action_size": rusted_spire.ACTION_SIZE,
         "training": vars(args),
+        "revision": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+        "tracked_changes": bool(subprocess.check_output(["git", "diff", "HEAD", "--name-only"], text=True).strip()),
+        "packages": {name: version(name) for name in ("torch", "stable-baselines3", "sb3-contrib", "gymnasium", "numpy")},
     }
     (save_path / "interface.json").write_text(json.dumps(metadata, indent=2) + "\n")
     kwargs = {"enemies": args.enemies, "ascension": args.ascension}
@@ -58,7 +63,7 @@ def main():
             seed=args.seed, device="cpu",
         )
         callback = MaskableEvalCallback(
-            eval_env, best_model_save_path=str(save_path), log_path="logs/",
+            eval_env, best_model_save_path=str(save_path), log_path=str(save_path / "evaluation"),
             eval_freq=max(args.eval_freq // args.n_envs, 1),
             n_eval_episodes=args.eval_episodes, deterministic=True, verbose=1,
         )

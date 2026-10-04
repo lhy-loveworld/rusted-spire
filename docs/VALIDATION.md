@@ -94,13 +94,37 @@ is required to run the committed fixture tests.
 
 ## Remaining fidelity work
 
-- Lagavulin behavior, Guardian Mode Shift, and several other enemy effects
-  are still approximations.
+- Lagavulin and Guardian now have source-derived corrections; see
+  [ELITE_BOSS_AUDIT.md](ELITE_BOSS_AUDIT.md). Other enemy AI/effects, queued Curl Up
+  timing, and unsupported reactions still require audits.
 - Some cards automatically select a card for upgrade/exhaust/discard instead
   of exposing a choice. Card upgrade costs and other effects need an audit.
 - Full combat RNG call order and live-game trace comparison are not established;
   the primitive/shuffle fixture agreement does not establish whole-combat parity.
 - Existing trained policies need reevaluation after combat correctness changes.
+
+## Constructor and elite/boss corrections (interface v4)
+
+Constructor HP/damage rolls now precede formation-wide pre-battle rolls,
+correcting multi-Louse initialization. Fixed boss HP still consumes a roll;
+explicit-HP slime children do not. Lagavulin's waking, sleep duration and
+permanent Dexterity/Strength loss are implemented. Guardian now has its
+offensive/defensive cycle, Mode Shift thresholds, and Sharp Hide retaliation.
+Source paths, ordering decisions and limits are in
+[ELITE_BOSS_AUDIT.md](ELITE_BOSS_AUDIT.md).
+
+Validation: 80 Rust tests and 16 Python/Gymnasium tests, including 100 seeded
+episodes now covering Lagavulin and Guardian. New observations expose the
+relevant powers and Sleep/Stun intents: v4 is 196 / 61. Old checkpoints cannot
+load into the changed observation shape and need retraining.
+
+`tools/benchmark_training.py` runs independent training seeds, preserves final
+checkpoints/logs, and compares them with uniform legal-action baselines on
+matched held-out seeds. It records per-episode outcomes, remaining enemy HP,
+Wilson win-rate intervals, package versions, Git revision and checkpoint hashes.
+Intervals describe evaluation-seed uncertainty for each policy, not training
+variance. Training seeds are reported separately. Benchmark results are recorded
+separately after completion; passing tests alone is not evidence of learning.
 
 ## WSL validation run (2026-10-03, interface v3)
 

@@ -19,9 +19,11 @@ move changes, Demon Form's post-draw timing, and round-end hook ordering.
 RNG primitives and deck shuffles now match executed Java fixtures; combat
 streams start independently from the same effective combat seed.
 Training and seeded evaluation scripts are available, with CI coverage.
-Next priorities are constructor/effect RNG call-order audits and original-game trace comparison,
-enemy/card fidelity (Lagavulin, Guardian, card choices), and meaningful
-held-out training experiments. Java parity has not been established. See
+Constructor ordering now separates creation, initial moves and pre-battle rolls.
+Lagavulin and Guardian have source-derived mechanics tests; interface v4 exposes
+their new powers (196 observations / 61 actions). Next priorities are controlled
+combat traces, remaining enemy AI/card choice audits, and multi-seed held-out
+training comparisons. Full Java combat parity has not been established. See
 README.md and docs/VALIDATION.md for setup, evidence, and interface limits.
 
 ---
@@ -123,7 +125,7 @@ Source: `GameActionManager`, `AbstractDungeon`, `AbstractPlayer`, `AbstractMonst
 ---
 
 ## Phase 7 — Observation & Action Encoding (RL Interface)
-- [x] Flat `Vec<f32>` encoding, 178 values in interface v3 (see docs/RL_INTERFACE.md)
+- [x] Flat `Vec<f32>` encoding, 196 values in interface v4 (see docs/RL_INTERFACE.md)
 - [x] Player, hand, five living enemy slots, per-creature powers and timing flags
 - [x] `Vec<bool>` mask aligned to 61 actions, with explicit target selection
 - [x] Exported `ACTION_SIZE`, `OBS_SIZE`, and `INTERFACE_VERSION`

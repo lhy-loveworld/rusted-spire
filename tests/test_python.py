@@ -9,9 +9,9 @@ import rusted_spire
 
 class SlayEnvTests(unittest.TestCase):
     def test_versioned_interface_and_explicit_targeting(self):
-        self.assertEqual(rusted_spire.INTERFACE_VERSION, 3)
+        self.assertEqual(rusted_spire.INTERFACE_VERSION, 4)
         self.assertEqual(rusted_spire.ACTION_SIZE, 61)
-        self.assertEqual(rusted_spire.OBS_SIZE, 178)
+        self.assertEqual(rusted_spire.OBS_SIZE, 196)
         env = rusted_spire.SlayEnv(enemies=["JawWorm", "JawWorm"])
         before, mask = env.reset(42)
         action = next(i for i, legal in enumerate(mask)
@@ -105,7 +105,8 @@ class SlayEnvTests(unittest.TestCase):
     def test_random_policy_completes_100_episodes(self):
         policy = random.Random(1234)
         encounters = (["JawWorm"], ["Cultist"], ["LouseNormal", "LouseDefensive"],
-                      ["Sentry"] * 3, ["SlimeBoss"], ["AcidSlimeLarge", "SpikeSlimeLarge"])
+                      ["Sentry"] * 3, ["SlimeBoss"], ["AcidSlimeLarge", "SpikeSlimeLarge"],
+                      ["Lagavulin"], ["TheGuardian"])
         for seed in range(100):
             env = rusted_spire.SlayEnv(enemies=encounters[seed % len(encounters)])
             obs, mask = env.reset(seed)

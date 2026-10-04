@@ -1,8 +1,9 @@
-# RL interface v3
+# RL interface v4
 
-`rusted_spire.INTERFACE_VERSION == 3`. Older v1 (83/11) and v2 (172/61)
-policies are incompatible and must be retrained. Current dimensions are 178 / 61.
-Version 3 adds Artifact, Dazed (card ordinal 29), and a distinct Split intent.
+`rusted_spire.INTERFACE_VERSION == 4`. Older v1 (83/11), v2 (172/61) and
+v3 (178/61) policies are incompatible and must be retrained.
+Current dimensions are 196 / 61. Version 4 adds Dexterity, Mode Shift and
+Sharp Hide, plus distinct Sleep/Stun intents. Dazed remains card ordinal 29.
 Training writes the version, dimensions, and command arguments to
 `interface.json` beside the checkpoint. Evaluation passes the environment to
 SB3 on load so incompatible observation/action dimensions are rejected.
@@ -32,8 +33,8 @@ float32 values; consumers should not assume the old [-1, 2] interval.
 |---|---|---|
 | 0–7 | Player HP, block, energy, draw/discard/exhaust counts, hand size, turn | max HP, 100, max energy, 10/10/10, 10, 100 |
 | 8–47 | Ten hand slots: card ID, cost, upgraded, playable | 29, 3, boolean, boolean |
-| 48–62 | Player powers and timing flags | As below |
-| 63–177 | Five enemy slots, 23 values each | As below |
+| 48–65 | Player powers and timing flags | As below |
+| 66–195 | Five enemy slots, 26 values each | As below |
 
 Each enemy slot has: alive flag; enemy ID / 21; HP / max HP; max HP / 300;
 block / 100; intent type / 7; damage per hit / 20; hit count / 4; then powers.
@@ -41,7 +42,8 @@ Missing slots are all zero. Non-attacks have zero damage and hit count.
 
 Power entries are Strength / 10, Vulnerable / 5, Weak / 5, Frail / 5,
 Ritual / 5, Curl Up / 12, Anger / 5, Metallicize / 10, Demon Form / 5,
-Strength Down / 10, Artifact / 3, then three fresh-debuff flags (Vulnerable, Weak, Frail)
+Strength Down / 10, Artifact / 3, Dexterity / 10, Mode Shift remaining HP / 50,
+Sharp Hide / 4, then three fresh-debuff flags (Vulnerable, Weak, Frail)
 and Ritual's skip-first-tick flag.
 
 Enemy ID order: JawWorm, Cultist, LouseNormal, LouseDefensive, FungiBeast,
@@ -49,7 +51,9 @@ AcidSlimeSmall, AcidSlimeMedium, SpikeSlimeSmall, SpikeSlimeMedium, MadGremlin,
 SneakyGremlin, FatGremlin, ShieldGremlin, GremlinWizard, GremlinNob, Lagavulin,
 Sentry, SlimeBoss, AcidSlimeLarge, SpikeSlimeLarge, TheGuardian (1–21).
 Intent types: unknown=0, attack=1, attack+debuff=2, attack+block=3, buff=4,
-debuff=5, defend=6, split=7. Multi-hit attacks use type 1 and a hit count above one.
+debuff=5, defend=6, split=7, sleep=8, stun=9. The divisor remains 7, so Sleep/Stun
+encode above 1. Multi-hit attacks use type 1 and a hit count above one; Guardian's
+Twin Slam also restores offensive mode, but its intent uses that attack encoding.
 
 Slimes announce Split after surviving damage at or below half HP; the split
 executes on their next action. Children occupy the parent's place in formation
@@ -73,7 +77,7 @@ seed + floor; this simulator has no floor/run model. RNG primitives and deck
 shuffles now follow the [Java reference fixtures](RNG_VALIDATION.md), replacing
 the earlier stream offsets and shuffle algorithm. Identical numeric seeds
 therefore produce different episodes than earlier revisions. Interface v3
-dimensions are unchanged, but existing policies need reevaluation. Matching a
+was subsequently superseded by v4's new powers and dimensions. Matching a
 whole original-game combat still requires validating random-call order.
 
 `max_steps` defaults to 1000; exceeding it produces `truncated=True`, distinct

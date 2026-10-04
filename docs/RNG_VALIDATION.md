@@ -57,8 +57,9 @@ values before accepting regenerated fixtures.
 
 Fixture agreement validates these inputs and algorithms, not whole-game parity.
 The JDK version is recorded; this is not execution inside the game's shipped
-JVM. Constructor/effect call order, fixed versus rolled HP, monster-specific
-random streams, generated-card insertion, and selected-card mechanics still
-need an audit and controlled combat traces. Record the original JAR checksum
-and build when available. Seeded training outcomes from earlier revisions are
-not directly comparable; interface v3 dimensions remain unchanged.
+JVM. The subsequent [constructor audit](ELITE_BOSS_AUDIT.md) checks fixed versus
+rolled HP and corrects the order of pre-battle calls. Other effect call order,
+monster AI, generated-card insertion and selected-card mechanics still need
+audits and controlled combat traces. Record the original JAR checksum and build
+when available. Seeded outcomes from earlier revisions are not directly
+comparable; the current interface is v4 (196 observations / 61 actions).

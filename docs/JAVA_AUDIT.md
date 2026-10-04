@@ -80,5 +80,6 @@ RNG consumption remain unverified. Player Ritual also remains unsupported.
 
 Record the original JAR build and checksum when available. Capture controlled original-game combat
 traces and compare state after each action, explicitly mapping IDs and intents.
-Extend the RNG test suite to cover combat call order. Lagavulin, Guardian, card choices,
-relics, and other unsupported interactions remain outside this initial audit.
+The subsequent [constructor and elite/boss audit](ELITE_BOSS_AUDIT.md) corrects
+initial RNG ordering, Lagavulin and Guardian. Card choices, relics and other
+unsupported interactions still remain outside these audits.

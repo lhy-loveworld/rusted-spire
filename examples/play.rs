@@ -214,6 +214,8 @@ fn intent_string(intent: &Intent) -> String {
         Intent::Defend            => "Defend".to_string(),
         Intent::Unknown           => "Unknown/Sleeping".to_string(),
         Intent::Split             => "Split".to_string(),
+        Intent::Sleep             => "Sleep".to_string(),
+        Intent::Stun              => "Stunned".to_string(),
     }
 }
 

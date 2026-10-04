@@ -50,7 +50,10 @@ pub fn deal_damage(damage: i32, block: &mut i32, hp: &mut i32) -> i32 {
 /// Mirrors the block calculation chain (Frail etc).
 pub fn apply_block_powers(base: i32, owner_powers: &[PowerState]) -> i32 {
     let mut tmp = base as f32;
-    for p in owner_powers {
+    for p in owner_powers.iter().filter(|p| p.id() == PowerId::Dexterity) {
+        tmp = p.modify_block(tmp);
+    }
+    for p in owner_powers.iter().filter(|p| p.id() != PowerId::Dexterity) {
         tmp = p.modify_block(tmp);
     }
     (tmp.floor() as i32).max(0)

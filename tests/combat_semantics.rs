@@ -129,7 +129,7 @@ fn ritual_and_skill_reactions_refresh_intents_without_rng() {
 #[test]
 fn multihit_intent_rounds_each_hit_before_multiplying() {
     let mut s = state(&[], &[EnemyId::TheGuardian]);
-    s.enemies[0].next_move = 3; // four hits of 5
+    s.enemies[0].next_move = 5; // four hits of 5
     s.enemies[0].creature.apply_power(PowerId::Strength, 2);
     s.enemies[0].creature.apply_power(PowerId::Weak, 1);
     s.player.creature.apply_power(PowerId::Vulnerable, 1);

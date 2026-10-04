@@ -50,15 +50,15 @@ impl CombatState {
     pub fn new(deck: Vec<Card>, enemy_ids: &[EnemyId], seed: u64, ascension: u8, starting_hp: i32) -> Self {
         let mut rng = RngBundle::new(seed);
 
-        let enemies = enemy_ids
-            .iter()
-            .enumerate()
-            .map(|(position, &id)| {
-                let mut enemy = EnemyState::new(id, ascension, &mut rng.monster_hp, &mut rng.ai);
-                enemy.set_formation_position(position);
-                enemy
-            })
-            .collect();
+        let mut enemies: Vec<_> = enemy_ids.iter()
+            .map(|&id| EnemyState::construct(id, ascension, &mut rng.monster_hp)).collect();
+        for (position, enemy) in enemies.iter_mut().enumerate() {
+            enemy.roll_move(&mut rng.ai, true);
+            enemy.set_formation_position(position);
+        }
+        for enemy in &mut enemies {
+            enemy.pre_battle(&mut rng.monster_hp);
+        }
 
         let mut player = PlayerState::new(starting_hp, Self::MAX_HP, 3, deck, &mut rng.shuffle);
         player.draw(crate::player::HAND_SIZE, &mut rng.shuffle);
@@ -127,13 +127,13 @@ pub fn step(state: &mut CombatState, action: Action) -> Option<CombatResult> {
     match action {
         Action::PlayCard { hand_idx, target_idx } => {
             play_card(state, hand_idx, target_idx);
-            if all_dead(&state.enemies) {
-                let result = CombatResult::Victory;
+            if state.player.creature.is_dead() {
+                let result = CombatResult::Defeat;
                 state.phase = CombatPhase::Over(result.clone());
                 return Some(result);
             }
-            if state.player.creature.is_dead() {
-                let result = CombatResult::Defeat;
+            if all_dead(&state.enemies) {
+                let result = CombatResult::Victory;
                 state.phase = CombatPhase::Over(result.clone());
                 return Some(result);
             }
@@ -163,6 +163,12 @@ pub fn step(state: &mut CombatState, action: Action) -> Option<CombatResult> {
 fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
     let card = state.player.hand[hand_idx].clone();
     state.player.energy -= card.cost;
+    // onUseCard runs before queued card effects. Capture every living owner's
+    // Sharp Hide now; its THORNS action survives even if this card kills it.
+    let retaliation: Vec<_> = if card_type(card.id) == CardType::Attack {
+        state.enemies.iter().filter(|e| !e.is_dead())
+            .map(|e| e.creature.power_amount(PowerId::SharpHide)).filter(|&n| n > 0).collect()
+    } else { vec![] };
 
     match card.id {
         // --- basics ---
@@ -194,6 +200,7 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
                 let dmg = apply_powers(base, DamageType::Normal, &attacker_powers, &state.enemies[target_idx].creature.powers);
                 let hp_lost = state.enemies[target_idx].creature.receive_damage(dmg, DamageType::Normal);
                 state.enemies[target_idx].creature.trigger_on_attacked(hp_lost, DamageType::Normal);
+                state.enemies[target_idx].on_hp_lost(hp_lost);
                 process_death(state, target_idx);
             }
             state.player.discard_from_hand(hand_idx);
@@ -227,6 +234,7 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
             let dmg = apply_powers(effective_base, DamageType::Normal, &attacker_powers, &state.enemies[target_idx].creature.powers);
             let hp_lost = state.enemies[target_idx].creature.receive_damage(dmg, DamageType::Normal);
             state.enemies[target_idx].creature.trigger_on_attacked(hp_lost, DamageType::Normal);
+            state.enemies[target_idx].on_hp_lost(hp_lost);
             process_death(state, target_idx);
             state.player.discard_from_hand(hand_idx);
         }
@@ -278,6 +286,7 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
                 let dmg = apply_powers(base, DamageType::Normal, &attacker_powers, &state.enemies[t].creature.powers);
                 let hp_lost = state.enemies[t].creature.receive_damage(dmg, DamageType::Normal);
                 state.enemies[t].creature.trigger_on_attacked(hp_lost, DamageType::Normal);
+                state.enemies[t].on_hp_lost(hp_lost);
                 process_death(state, t);
             }
             state.player.discard_from_hand(hand_idx);
@@ -400,6 +409,13 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
             }
         }
     }
+    for damage in retaliation {
+        state.player.creature.receive_damage(damage, DamageType::Thorns);
+        if state.player.creature.is_dead() { break; }
+    }
+    for enemy in &mut state.enemies {
+        enemy.resolve_card_reactions();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -413,6 +429,7 @@ fn deal_to(state: &mut CombatState, hand_idx: usize, target_idx: usize, base: i3
     let dmg = apply_powers(base, DamageType::Normal, &attacker_powers, &state.enemies[target_idx].creature.powers);
     let hp_lost = state.enemies[target_idx].creature.receive_damage(dmg, DamageType::Normal);
     state.enemies[target_idx].creature.trigger_on_attacked(hp_lost, DamageType::Normal);
+    state.enemies[target_idx].on_hp_lost(hp_lost);
     process_death(state, target_idx);
     if and_discard {
         state.player.discard_from_hand(hand_idx);
@@ -428,6 +445,7 @@ fn deal_all(state: &mut CombatState, base: i32) {
             let dmg = apply_powers(base, DamageType::Normal, &attacker_powers, &state.enemies[i].creature.powers);
             let hp_lost = state.enemies[i].creature.receive_damage(dmg, DamageType::Normal);
             state.enemies[i].creature.trigger_on_attacked(hp_lost, DamageType::Normal);
+            state.enemies[i].on_hp_lost(hp_lost);
         }
     }
     // Process all deaths after the full AoE sweep

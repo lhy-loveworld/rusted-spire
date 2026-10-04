@@ -53,7 +53,7 @@ impl CreatureState {
         if amount == 0 { return; }
         let debuff = (amount > 0 && matches!(id,
             PowerId::Weak | PowerId::Vulnerable | PowerId::Frail | PowerId::StrengthDown))
-            || (id == PowerId::Strength && amount < 0);
+            || (matches!(id, PowerId::Strength | PowerId::Dexterity) && amount < 0);
         if debuff && self.power_amount(PowerId::Artifact) > 0 {
             self.apply_power(PowerId::Artifact, -1);
             return;
@@ -75,6 +75,9 @@ impl CreatureState {
             PowerId::DemonForm   => PowerState::DemonForm(DemonFormPower { stacks: amount }),
             PowerId::StrengthDown=> PowerState::StrengthDown(StrengthDownPower { stacks: amount }),
             PowerId::Artifact => PowerState::Artifact(crate::power::ArtifactPower { stacks: amount }),
+            PowerId::Dexterity => PowerState::Dexterity(crate::power::DexterityPower { stacks: amount.clamp(-999, 999) }),
+            PowerId::ModeShift => PowerState::ModeShift(crate::power::ModeShiftPower { stacks: amount }),
+            PowerId::SharpHide => PowerState::SharpHide(crate::power::SharpHidePower { stacks: amount }),
         };
         self.powers.push(power);
     }

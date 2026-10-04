@@ -69,6 +69,26 @@ class GymContractTests(unittest.TestCase):
         env = SpireEnv()
         self.assertEqual(evaluate(env, episodes=10), evaluate(env, episodes=10))
 
+    def test_evaluation_records_preserve_truncations_and_seed_provenance(self):
+        from evaluate import evaluate
+        class EndTurnPolicy:
+            def predict(self, obs, **kwargs):
+                return rusted_spire.END_TURN_ACTION, None
+        env = SpireEnv(max_steps=1)
+        result = evaluate(env, episodes=5, model=EndTurnPolicy(), include_episodes=True)
+        self.assertEqual(result["wins"], 0)
+        self.assertEqual(result["truncations"], 5)
+        self.assertEqual(result["mean_steps"], 1)
+        self.assertEqual(result["mean_reward"], 0)
+        self.assertGreater(result["win_rate_wilson95"][1], 0)
+        for record, seed in zip(result["episode_results"], range(100000, 100005)):
+            _, info = env.reset(seed=seed)
+            self.assertEqual(record["environment_seed"], seed)
+            self.assertEqual(record["combat_seed"], info["combat_seed"])
+            self.assertTrue(record["truncated"])
+            self.assertFalse(record["win"])
+            self.assertGreater(record["enemy_hp_remaining"], 0)
+
     def test_notebook_cells_compile_and_chain_uses_shared_wrapper(self):
         import gymnasium as gym
         notebook = json.loads((Path(__file__).parents[1] / "experiments.ipynb").read_text())

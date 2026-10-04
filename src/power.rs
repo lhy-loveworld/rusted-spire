@@ -43,6 +43,9 @@ pub enum PowerId {
     DemonForm,    // gain N Strength at start of player turn
     StrengthDown, // lose N Strength at end of turn (used by Flex)
     Artifact,     // blocks one debuff application per charge
+    Dexterity,
+    ModeShift,
+    SharpHide,
 }
 
 /// Enum-dispatch wrapper so powers can be stored in a Vec without boxing.
@@ -59,6 +62,9 @@ pub enum PowerState {
     DemonForm(DemonFormPower),
     StrengthDown(StrengthDownPower),
     Artifact(ArtifactPower),
+    Dexterity(DexterityPower),
+    ModeShift(ModeShiftPower),
+    SharpHide(SharpHidePower),
 }
 
 impl PowerState {
@@ -75,6 +81,9 @@ impl PowerState {
             PowerState::DemonForm(_)   => PowerId::DemonForm,
             PowerState::StrengthDown(_)=> PowerId::StrengthDown,
             PowerState::Artifact(_)=> PowerId::Artifact,
+            PowerState::Dexterity(_)=> PowerId::Dexterity,
+            PowerState::ModeShift(_)=> PowerId::ModeShift,
+            PowerState::SharpHide(_)=> PowerId::SharpHide,
         }
     }
 
@@ -91,6 +100,9 @@ impl PowerState {
             PowerState::DemonForm(p)   => p.amount(),
             PowerState::StrengthDown(p)=> p.amount(),
             PowerState::Artifact(p)=> p.amount(),
+            PowerState::Dexterity(p)=> p.amount(),
+            PowerState::ModeShift(p)=> p.amount(),
+            PowerState::SharpHide(p)=> p.amount(),
         }
     }
 
@@ -107,6 +119,9 @@ impl PowerState {
             PowerState::DemonForm(p)   => p.stack(amount),
             PowerState::StrengthDown(p)=> p.stack(amount),
             PowerState::Artifact(p)=> p.stack(amount),
+            PowerState::Dexterity(p)=> p.stack(amount),
+            PowerState::ModeShift(p)=> p.stack(amount),
+            PowerState::SharpHide(p)=> p.stack(amount),
         }
     }
 
@@ -123,6 +138,9 @@ impl PowerState {
             PowerState::DemonForm(p)   => p.reduce(amount),
             PowerState::StrengthDown(p)=> p.reduce(amount),
             PowerState::Artifact(p)=> p.reduce(amount),
+            PowerState::Dexterity(p)=> p.reduce(amount),
+            PowerState::ModeShift(p)=> p.reduce(amount),
+            PowerState::SharpHide(p)=> p.reduce(amount),
         }
     }
 
@@ -139,6 +157,9 @@ impl PowerState {
             PowerState::DemonForm(p)   => p.at_damage_give(damage, dtype),
             PowerState::StrengthDown(p)=> p.at_damage_give(damage, dtype),
             PowerState::Artifact(p)=> p.at_damage_give(damage, dtype),
+            PowerState::Dexterity(p)=> p.at_damage_give(damage, dtype),
+            PowerState::ModeShift(p)=> p.at_damage_give(damage, dtype),
+            PowerState::SharpHide(p)=> p.at_damage_give(damage, dtype),
         }
     }
 
@@ -155,6 +176,9 @@ impl PowerState {
             PowerState::DemonForm(p)   => p.at_damage_receive(damage, dtype),
             PowerState::StrengthDown(p)=> p.at_damage_receive(damage, dtype),
             PowerState::Artifact(p)=> p.at_damage_receive(damage, dtype),
+            PowerState::Dexterity(p)=> p.at_damage_receive(damage, dtype),
+            PowerState::ModeShift(p)=> p.at_damage_receive(damage, dtype),
+            PowerState::SharpHide(p)=> p.at_damage_receive(damage, dtype),
         }
     }
 
@@ -171,6 +195,9 @@ impl PowerState {
             PowerState::DemonForm(p)   => p.at_damage_final_give(damage, dtype),
             PowerState::StrengthDown(p)=> p.at_damage_final_give(damage, dtype),
             PowerState::Artifact(p)=> p.at_damage_final_give(damage, dtype),
+            PowerState::Dexterity(p)=> p.at_damage_final_give(damage, dtype),
+            PowerState::ModeShift(p)=> p.at_damage_final_give(damage, dtype),
+            PowerState::SharpHide(p)=> p.at_damage_final_give(damage, dtype),
         }
     }
 
@@ -187,6 +214,9 @@ impl PowerState {
             PowerState::DemonForm(p)   => p.at_damage_final_receive(damage, dtype),
             PowerState::StrengthDown(p)=> p.at_damage_final_receive(damage, dtype),
             PowerState::Artifact(p)=> p.at_damage_final_receive(damage, dtype),
+            PowerState::Dexterity(p)=> p.at_damage_final_receive(damage, dtype),
+            PowerState::ModeShift(p)=> p.at_damage_final_receive(damage, dtype),
+            PowerState::SharpHide(p)=> p.at_damage_final_receive(damage, dtype),
         }
     }
 
@@ -203,6 +233,9 @@ impl PowerState {
             PowerState::DemonForm(p)   => p.modify_block(block),
             PowerState::StrengthDown(p)=> p.modify_block(block),
             PowerState::Artifact(p)=> p.modify_block(block),
+            PowerState::Dexterity(p)=> p.modify_block(block),
+            PowerState::ModeShift(p)=> p.modify_block(block),
+            PowerState::SharpHide(p)=> p.modify_block(block),
         }
     }
 
@@ -230,6 +263,9 @@ impl PowerState {
             PowerState::DemonForm(p)   => p.at_end_of_turn(is_player),
             PowerState::StrengthDown(p)=> p.at_end_of_turn(is_player),
             PowerState::Artifact(p)=> p.at_end_of_turn(is_player),
+            PowerState::Dexterity(p)=> p.at_end_of_turn(is_player),
+            PowerState::ModeShift(p)=> p.at_end_of_turn(is_player),
+            PowerState::SharpHide(p)=> p.at_end_of_turn(is_player),
         }
     }
 
@@ -448,4 +484,35 @@ impl Power for RitualPower {
             Some((PowerId::Strength, self.stacks))
         }
     }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct DexterityPower { pub stacks: i32 }
+
+impl Power for DexterityPower {
+    fn power_id(&self) -> PowerId { PowerId::Dexterity }
+    fn amount(&self) -> i32 { self.stacks }
+    fn stack(&mut self, n: i32) { self.stacks = (self.stacks + n).clamp(-999, 999); }
+    fn reduce(&mut self, n: i32) { self.stacks = (self.stacks - n).clamp(-999, 999); }
+    fn modify_block(&self, block: f32) -> f32 { (block + self.stacks as f32).max(0.0) }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ModeShiftPower { pub stacks: i32 }
+
+impl Power for ModeShiftPower {
+    fn power_id(&self) -> PowerId { PowerId::ModeShift }
+    fn amount(&self) -> i32 { self.stacks }
+    fn stack(&mut self, n: i32) { self.stacks += n; }
+    fn reduce(&mut self, n: i32) { self.stacks -= n; }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct SharpHidePower { pub stacks: i32 }
+
+impl Power for SharpHidePower {
+    fn power_id(&self) -> PowerId { PowerId::SharpHide }
+    fn amount(&self) -> i32 { self.stacks }
+    fn stack(&mut self, n: i32) { self.stacks += n; }
+    fn reduce(&mut self, n: i32) { self.stacks -= n; }
 }
