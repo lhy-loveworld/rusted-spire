@@ -4,7 +4,7 @@ use crate::creature::CreatureState;
 use crate::enemy::{EnemyId, Intent};
 use crate::power::{PowerId, PowerState};
 
-pub const INTERFACE_VERSION: u32 = 2;
+pub const INTERFACE_VERSION: u32 = 3;
 pub const MAX_HAND: usize = crate::player::MAX_HAND;
 pub const MAX_ENEMIES: usize = 5;
 pub const TARGETS_PER_CARD: usize = MAX_ENEMIES + 1;
@@ -14,16 +14,17 @@ pub const ACTION_SIZE: usize = END_TURN_ACTION + 1;
 
 pub const PLAYER_FEATURES: usize = 8;
 pub const HAND_FEATURES: usize = 4;
-pub const POWER_FEATURES: usize = 14;
+pub const POWER_FEATURES: usize = 15;
 pub const ENEMY_FEATURES: usize = 8 + POWER_FEATURES;
 pub const ENEMY_OFFSET: usize = PLAYER_FEATURES + MAX_HAND * HAND_FEATURES + POWER_FEATURES;
 pub const OBS_SIZE: usize = ENEMY_OFFSET + MAX_ENEMIES * ENEMY_FEATURES;
 
-const POWER_SCALES: [(PowerId, f32); 10] = [
+const POWER_SCALES: [(PowerId, f32); 11] = [
     (PowerId::Strength, 10.0), (PowerId::Vulnerable, 5.0),
     (PowerId::Weak, 5.0), (PowerId::Frail, 5.0), (PowerId::Ritual, 5.0),
     (PowerId::CurlUp, 12.0), (PowerId::Anger, 5.0), (PowerId::Metalicize, 10.0),
     (PowerId::DemonForm, 5.0), (PowerId::StrengthDown, 10.0),
+    (PowerId::Artifact, 3.0),
 ];
 
 /// Observation slots enumerate living enemies in vector order. The same
@@ -150,13 +151,14 @@ pub fn decode_action(index: usize, state: &CombatState) -> Option<Action> {
 
 fn encode_intent(intent: &Intent) -> (f32, f32, f32) {
     match *intent {
-        Intent::Attack(d) => (1.0 / 6.0, d as f32, 1.0),
-        Intent::MultiAttack { damage, hits } => (1.0 / 6.0, damage as f32, hits as f32),
-        Intent::AttackDebuff(d) => (2.0 / 6.0, d as f32, 1.0),
-        Intent::AttackDefend(d) => (3.0 / 6.0, d as f32, 1.0),
-        Intent::Buff => (4.0 / 6.0, 0.0, 0.0),
-        Intent::Debuff => (5.0 / 6.0, 0.0, 0.0),
-        Intent::Defend => (1.0, 0.0, 0.0),
+        Intent::Attack(d) => (1.0 / 7.0, d as f32, 1.0),
+        Intent::MultiAttack { damage, hits } => (1.0 / 7.0, damage as f32, hits as f32),
+        Intent::AttackDebuff(d) => (2.0 / 7.0, d as f32, 1.0),
+        Intent::AttackDefend(d) => (3.0 / 7.0, d as f32, 1.0),
+        Intent::Buff => (4.0 / 7.0, 0.0, 0.0),
+        Intent::Debuff => (5.0 / 7.0, 0.0, 0.0),
+        Intent::Defend => (6.0 / 7.0, 0.0, 0.0),
+        Intent::Split => (1.0, 0.0, 0.0),
         Intent::Unknown => (0.0, 0.0, 0.0),
     }
 }

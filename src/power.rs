@@ -41,6 +41,7 @@ pub enum PowerId {
     Metalicize,   // gain N block at end of turn
     DemonForm,    // gain N Strength at start of player turn
     StrengthDown, // lose N Strength at end of turn (used by Flex)
+    Artifact,     // blocks one debuff application per charge
 }
 
 /// Enum-dispatch wrapper so powers can be stored in a Vec without boxing.
@@ -56,6 +57,7 @@ pub enum PowerState {
     Metalicize(MetalicizePower),
     DemonForm(DemonFormPower),
     StrengthDown(StrengthDownPower),
+    Artifact(ArtifactPower),
 }
 
 impl PowerState {
@@ -71,6 +73,7 @@ impl PowerState {
             PowerState::Metalicize(_)  => PowerId::Metalicize,
             PowerState::DemonForm(_)   => PowerId::DemonForm,
             PowerState::StrengthDown(_)=> PowerId::StrengthDown,
+            PowerState::Artifact(_)=> PowerId::Artifact,
         }
     }
 
@@ -86,6 +89,7 @@ impl PowerState {
             PowerState::Metalicize(p)  => p.amount(),
             PowerState::DemonForm(p)   => p.amount(),
             PowerState::StrengthDown(p)=> p.amount(),
+            PowerState::Artifact(p)=> p.amount(),
         }
     }
 
@@ -101,6 +105,7 @@ impl PowerState {
             PowerState::Metalicize(p)  => p.stack(amount),
             PowerState::DemonForm(p)   => p.stack(amount),
             PowerState::StrengthDown(p)=> p.stack(amount),
+            PowerState::Artifact(p)=> p.stack(amount),
         }
     }
 
@@ -116,6 +121,7 @@ impl PowerState {
             PowerState::Metalicize(p)  => p.reduce(amount),
             PowerState::DemonForm(p)   => p.reduce(amount),
             PowerState::StrengthDown(p)=> p.reduce(amount),
+            PowerState::Artifact(p)=> p.reduce(amount),
         }
     }
 
@@ -131,6 +137,7 @@ impl PowerState {
             PowerState::Metalicize(p)  => p.at_damage_give(damage, dtype),
             PowerState::DemonForm(p)   => p.at_damage_give(damage, dtype),
             PowerState::StrengthDown(p)=> p.at_damage_give(damage, dtype),
+            PowerState::Artifact(p)=> p.at_damage_give(damage, dtype),
         }
     }
 
@@ -146,6 +153,7 @@ impl PowerState {
             PowerState::Metalicize(p)  => p.at_damage_receive(damage, dtype),
             PowerState::DemonForm(p)   => p.at_damage_receive(damage, dtype),
             PowerState::StrengthDown(p)=> p.at_damage_receive(damage, dtype),
+            PowerState::Artifact(p)=> p.at_damage_receive(damage, dtype),
         }
     }
 
@@ -161,6 +169,7 @@ impl PowerState {
             PowerState::Metalicize(p)  => p.at_damage_final_give(damage, dtype),
             PowerState::DemonForm(p)   => p.at_damage_final_give(damage, dtype),
             PowerState::StrengthDown(p)=> p.at_damage_final_give(damage, dtype),
+            PowerState::Artifact(p)=> p.at_damage_final_give(damage, dtype),
         }
     }
 
@@ -176,6 +185,7 @@ impl PowerState {
             PowerState::Metalicize(p)  => p.at_damage_final_receive(damage, dtype),
             PowerState::DemonForm(p)   => p.at_damage_final_receive(damage, dtype),
             PowerState::StrengthDown(p)=> p.at_damage_final_receive(damage, dtype),
+            PowerState::Artifact(p)=> p.at_damage_final_receive(damage, dtype),
         }
     }
 
@@ -191,6 +201,7 @@ impl PowerState {
             PowerState::Metalicize(p)  => p.modify_block(block),
             PowerState::DemonForm(p)   => p.modify_block(block),
             PowerState::StrengthDown(p)=> p.modify_block(block),
+            PowerState::Artifact(p)=> p.modify_block(block),
         }
     }
 
@@ -213,6 +224,7 @@ impl PowerState {
             PowerState::Metalicize(p)  => p.at_end_of_turn(is_player),
             PowerState::DemonForm(p)   => p.at_end_of_turn(is_player),
             PowerState::StrengthDown(p)=> p.at_end_of_turn(is_player),
+            PowerState::Artifact(p)=> p.at_end_of_turn(is_player),
         }
     }
 
@@ -232,6 +244,18 @@ impl PowerState {
             _ => None,
         }
     }
+}
+
+// --- Artifact: consumed by CreatureState before a debuff is applied ---
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ArtifactPower { pub stacks: i32 }
+
+impl Power for ArtifactPower {
+    fn power_id(&self) -> PowerId { PowerId::Artifact }
+    fn amount(&self) -> i32 { self.stacks }
+    fn stack(&mut self, n: i32) { self.stacks += n; }
+    fn reduce(&mut self, n: i32) { self.stacks -= n; }
 }
 
 // --- Strength ---

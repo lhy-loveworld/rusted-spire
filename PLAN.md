@@ -12,10 +12,11 @@ items should not be interpreted as a complete inventory of missing code.
 
 Completed in the resumption: WSL/Python setup, regression tests, enemy block
 lifetime, defeat handling, illegal-action rejection, attack intent refresh,
-turn/round power timing, explicit multi-enemy targeting and observations (v2),
-and Gymnasium seeding/truncation. Training and seeded evaluation scripts are
-available, with CI coverage. Next priorities are original-game trace comparison,
-enemy/card fidelity (especially Sentries and slime splitting), and meaningful
+turn/round power timing, explicit multi-enemy targeting and observations (v3),
+Gymnasium seeding/truncation, Sentry Artifact/Dazed, and half-HP slime splits.
+Training and seeded evaluation scripts are available, with CI coverage.
+Next priorities are original-game trace comparison,
+enemy/card fidelity (slime AI, Lagavulin, Guardian), and meaningful
 held-out training experiments. Java parity has not been established. See
 README.md and docs/VALIDATION.md for setup, evidence, and interface limits.
 
@@ -69,7 +70,7 @@ Source: `AbstractCreature`, `AbstractPlayer`, `AbstractMonster`, `AbstractCard`,
 ### 3d — Player
 - [x] `PlayerState`: `CreatureState` + energy + hand/draw/discard/exhaust piles
 - [x] `draw(n)` — shuffles discard into draw when empty
-- [x] `start_turn()` — reset block, restore energy, discard hand, draw 5
+- [x] `start_turn()` — reset block, restore energy, draw 5; `end_turn()` exhausts Ethereal and discards the rest
 - [x] `discard_from_hand()`, `exhaust_from_hand()`
 
 ### 3e — Enemy
@@ -117,7 +118,7 @@ Source: `GameActionManager`, `AbstractDungeon`, `AbstractPlayer`, `AbstractMonst
 ---
 
 ## Phase 7 — Observation & Action Encoding (RL Interface)
-- [x] Flat `Vec<f32>` encoding, 172 values in interface v2 (see docs/RL_INTERFACE.md)
+- [x] Flat `Vec<f32>` encoding, 178 values in interface v3 (see docs/RL_INTERFACE.md)
 - [x] Player, hand, five living enemy slots, per-creature powers and timing flags
 - [x] `Vec<bool>` mask aligned to 61 actions, with explicit target selection
 - [x] Exported `ACTION_SIZE`, `OBS_SIZE`, and `INTERFACE_VERSION`

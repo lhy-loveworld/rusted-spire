@@ -9,9 +9,9 @@ import rusted_spire
 
 class SlayEnvTests(unittest.TestCase):
     def test_versioned_interface_and_explicit_targeting(self):
-        self.assertEqual(rusted_spire.INTERFACE_VERSION, 2)
+        self.assertEqual(rusted_spire.INTERFACE_VERSION, 3)
         self.assertEqual(rusted_spire.ACTION_SIZE, 61)
-        self.assertEqual(rusted_spire.OBS_SIZE, 172)
+        self.assertEqual(rusted_spire.OBS_SIZE, 178)
         env = rusted_spire.SlayEnv(enemies=["JawWorm", "JawWorm"])
         before, mask = env.reset(42)
         action = next(i for i, legal in enumerate(mask)
@@ -24,27 +24,30 @@ class SlayEnvTests(unittest.TestCase):
                         before[offset + rusted_spire.ENEMY_FEATURES + 2])
 
     def test_spawn_overflow_rejects_action_without_mutation(self):
-        enemies = ["AcidSlimeMedium"] + ["ShieldGremlin"] * 4
+        enemies = ["AcidSlimeLarge"] + ["ShieldGremlin"] * 4
         env = rusted_spire.SlayEnv(enemies=enemies, ascension=0)
         reference = rusted_spire.SlayEnv(enemies=enemies, ascension=0)
-        _, mask = env.reset(42)
-        reference.reset(42)
+        obs, mask = env.reset(2)
+        reference.reset(2)
         for _ in range(100):
+            if obs[rusted_spire.ENEMY_OFFSET + 5] == 1.0:  # pending Split
+                for _ in range(2):
+                    with self.assertRaisesRegex(ValueError, "capacity"):
+                        env.step(rusted_spire.END_TURN_ACTION)
+                # Seed 2 reaches the split with energy and a Defend left.
+                # Compare a successful transition to an untouched reference,
+                # including powers, hand, HP, mask and RNG-dependent state.
+                safe = next(i for i, legal in enumerate(mask)
+                            if legal and i != rusted_spire.END_TURN_ACTION)
+                self.assertEqual(env.step(safe), reference.step(safe))
+                break
             attacks = [i for i, legal in enumerate(mask)
                        if legal and i != rusted_spire.END_TURN_ACTION
                        and i % rusted_spire.TARGETS_PER_CARD == 0]
             action = attacks[0] if attacks else rusted_spire.END_TURN_ACTION
-            try:
-                result = env.step(action)
-            except ValueError as error:
-                self.assertIn("capacity", str(error))
-                with self.assertRaises(ValueError):
-                    env.step(action)
-                self.assertEqual(env.step(rusted_spire.END_TURN_ACTION),
-                                 reference.step(rusted_spire.END_TURN_ACTION))
-                break
+            result = env.step(action)
             self.assertEqual(result, reference.step(action))
-            _, mask, _, done = result
+            obs, mask, _, done = result
             self.assertFalse(done)
         else:
             self.fail("expected a split to exceed observation capacity")
@@ -101,7 +104,8 @@ class SlayEnvTests(unittest.TestCase):
 
     def test_random_policy_completes_100_episodes(self):
         policy = random.Random(1234)
-        encounters = (["JawWorm"], ["Cultist"], ["LouseNormal", "LouseDefensive"], ["Sentry"] * 3)
+        encounters = (["JawWorm"], ["Cultist"], ["LouseNormal", "LouseDefensive"],
+                      ["Sentry"] * 3, ["SlimeBoss"], ["AcidSlimeLarge", "SpikeSlimeLarge"])
         for seed in range(100):
             env = rusted_spire.SlayEnv(enemies=encounters[seed % len(encounters)])
             obs, mask = env.reset(seed)

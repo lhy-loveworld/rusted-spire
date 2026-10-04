@@ -172,6 +172,7 @@ fn card_name(id: CardId, upgraded: bool) -> String {
         CardId::DemonForm     => "Demon Form",
         CardId::Slimed        => "Slimed",
         CardId::Wound         => "Wound",
+        CardId::Dazed         => "Dazed",
     };
     if upgraded { format!("{}+", base) } else { base.to_string() }
 }
@@ -212,6 +213,7 @@ fn intent_string(intent: &Intent) -> String {
         Intent::Debuff            => "Debuff".to_string(),
         Intent::Defend            => "Defend".to_string(),
         Intent::Unknown           => "Unknown/Sleeping".to_string(),
+        Intent::Split             => "Split".to_string(),
     }
 }
 

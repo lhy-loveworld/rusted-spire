@@ -34,6 +34,7 @@ pub enum CardId {
     // Status cards (added to deck by enemies/effects, not rewards)
     Slimed,
     Wound,
+    Dazed,
 }
 
 /// A card instance in the player's deck or hand.
@@ -85,6 +86,7 @@ pub fn base_cost(id: CardId) -> i32 {
         CardId::DemonForm    => 3,
         CardId::Slimed       => 1,
         CardId::Wound        => 99, // effectively unplayable
+        CardId::Dazed        => 99,
     }
 }
 
@@ -111,7 +113,7 @@ pub fn card_type(id: CardId) -> CardType {
 
         CardId::Inflame | CardId::Metallicize | CardId::DemonForm => CardType::Power,
 
-        CardId::Slimed | CardId::Wound => CardType::Status,
+        CardId::Slimed | CardId::Wound | CardId::Dazed => CardType::Status,
     }
 }
 
@@ -127,13 +129,17 @@ pub fn requires_target(id: CardId) -> bool {
     )
 }
 
-/// Whether a card can be selected as an action. Wound is the only unplayable status.
+/// Whether a card can be selected as an action, regardless of energy.
 pub fn is_playable(id: CardId) -> bool {
-    !matches!(id, CardId::Wound)
+    !matches!(id, CardId::Wound | CardId::Dazed)
+}
+
+pub fn is_ethereal(id: CardId) -> bool {
+    matches!(id, CardId::Dazed)
 }
 
 /// Stable ordinal used for OBS encoding (1-indexed, 1..=CARD_COUNT).
-pub const CARD_COUNT: u32 = 28;
+pub const CARD_COUNT: u32 = 29;
 pub fn card_ordinal(id: CardId) -> u32 {
     match id {
         CardId::Strike        =>  1,
@@ -164,5 +170,6 @@ pub fn card_ordinal(id: CardId) -> u32 {
         CardId::DemonForm     => 26,
         CardId::Slimed        => 27,
         CardId::Wound         => 28,
+        CardId::Dazed         => 29,
     }
 }

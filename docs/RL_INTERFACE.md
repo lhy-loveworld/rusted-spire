@@ -1,7 +1,8 @@
-# RL interface v2
+# RL interface v3
 
-`rusted_spire.INTERFACE_VERSION == 2`. Old 83-observation / 11-action policies
-are incompatible and must be retrained. Current dimensions are 172 / 61.
+`rusted_spire.INTERFACE_VERSION == 3`. Older v1 (83/11) and v2 (172/61)
+policies are incompatible and must be retrained. Current dimensions are 178 / 61.
+Version 3 adds Artifact, Dazed (card ordinal 29), and a distinct Split intent.
 Training writes the version, dimensions, and command arguments to
 `interface.json` beside the checkpoint. Evaluation passes the environment to
 SB3 on load so incompatible observation/action dimensions are rejected.
@@ -30,17 +31,17 @@ float32 values; consumers should not assume the old [-1, 2] interval.
 | Offset | Features | Normalization |
 |---|---|---|
 | 0–7 | Player HP, block, energy, draw/discard/exhaust counts, hand size, turn | max HP, 100, max energy, 10/10/10, 10, 100 |
-| 8–47 | Ten hand slots: card ID, cost, upgraded, playable | 28, 3, boolean, boolean |
-| 48–61 | Player powers and timing flags | As below |
-| 62–171 | Five enemy slots, 22 values each | As below |
+| 8–47 | Ten hand slots: card ID, cost, upgraded, playable | 29, 3, boolean, boolean |
+| 48–62 | Player powers and timing flags | As below |
+| 63–177 | Five enemy slots, 23 values each | As below |
 
 Each enemy slot has: alive flag; enemy ID / 21; HP / max HP; max HP / 300;
-block / 100; intent type / 6; damage per hit / 20; hit count / 4; then powers.
+block / 100; intent type / 7; damage per hit / 20; hit count / 4; then powers.
 Missing slots are all zero. Non-attacks have zero damage and hit count.
 
 Power entries are Strength / 10, Vulnerable / 5, Weak / 5, Frail / 5,
 Ritual / 5, Curl Up / 12, Anger / 5, Metallicize / 10, Demon Form / 5,
-Strength Down / 10, then three fresh-debuff flags (Vulnerable, Weak, Frail)
+Strength Down / 10, Artifact / 3, then three fresh-debuff flags (Vulnerable, Weak, Frail)
 and Ritual's skip-first-tick flag.
 
 Enemy ID order: JawWorm, Cultist, LouseNormal, LouseDefensive, FungiBeast,
@@ -48,7 +49,13 @@ AcidSlimeSmall, AcidSlimeMedium, SpikeSlimeSmall, SpikeSlimeMedium, MadGremlin,
 SneakyGremlin, FatGremlin, ShieldGremlin, GremlinWizard, GremlinNob, Lagavulin,
 Sentry, SlimeBoss, AcidSlimeLarge, SpikeSlimeLarge, TheGuardian (1–21).
 Intent types: unknown=0, attack=1, attack+debuff=2, attack+block=3, buff=4,
-debuff=5, defend=6. Multi-hit attacks use type 1 and a hit count above one.
+debuff=5, defend=6, split=7. Multi-hit attacks use type 1 and a hit count above one.
+
+Slimes announce Split after surviving damage at or below half HP; the split
+executes on their next action. Children occupy the parent's place in formation
+order, have its remaining HP as both current and max HP, and do not act in the
+phase in which they spawn. A lethal hit prevents splitting. Use the returned
+mask after every transition, since splitting changes the target slots.
 
 This remains a partial observation: draw order, pile composition and enemy move
 history are not exposed. The policy does not receive omniscient simulator state.

@@ -12,7 +12,7 @@ Most existing Slay the Spire AI projects hook into the live Java game process vi
 
 ## Status
 
-Early development. The simulator includes 28 card/status IDs and 21 enemy IDs,
+Early development. The simulator includes 29 card/status IDs and 21 enemy IDs,
 including Act 1 elites and two bosses. Implemented content is not yet fully
 validated against the original game.
 
@@ -21,7 +21,7 @@ validated against the original game.
 | RNG (xorshift128, seeded, multiple streams) | ✅ |
 | Damage pipeline (Strength, Vulnerable, Weak, Frail) | ✅ |
 | Combat loop (player turn, enemy turn, win/lose) | ✅ |
-| Cards | Ironclad basics, additional attacks/skills/powers, Slimed and Wound |
+| Cards | Ironclad basics, additional attacks/skills/powers, Slimed, Wound and Dazed |
 | Enemies | Act 1 normals, gremlins, elites, Slime Boss, The Guardian |
 | Python bindings (PyO3) | `SlayEnv`, observations and action masks |
 | RL training loop | MaskablePPO script and experiment notebook; results need revalidation |
@@ -75,7 +75,7 @@ python evaluate.py --episodes 100 --enemies Cultist
 ```
 
 `SlayEnv()` currently defaults to Cultist at ascension 7. The fixed interface has
-**172 observation values and 61 actions** (interface v2). Targeted cards can
+**178 observation values and 61 actions** (interface v3). Targeted cards can
 select any of five living enemy slots, each with its own powers and attack
 intent. Old checkpoints require retraining. See [RL_INTERFACE.md](docs/RL_INTERFACE.md)
 for offsets, target encoding, seeding, and capacity limits.
@@ -87,14 +87,15 @@ For a reproducible multi-enemy smoke run and held-out evaluation:
 ```bash
 python train.py --timesteps 2048 --n-envs 2 --n-steps 64 \
   --eval-freq 1024 --eval-episodes 20 --enemies LouseNormal LouseDefensive \
-  --save-path models/smoke_v2
+  --save-path models/smoke_v3
 python evaluate.py --episodes 100 --enemies LouseNormal LouseDefensive
-python evaluate.py --model models/smoke_v2/final --episodes 100 \
+python evaluate.py --model models/smoke_v3/final --episodes 100 \
   --enemies LouseNormal LouseDefensive
 ```
 
-GitHub Actions runs Rust/Python tests and a short masked PPO smoke test. Slime
-splitting, several enemy/card effects, and exact Java RNG matching still need
+GitHub Actions runs Rust/Python tests and a short masked PPO smoke test. Sentry
+Artifact/Dazed and half-HP slime splitting have regression coverage. Slime move
+selection, other enemy/card effects, and exact Java RNG matching still need
 fidelity checks before training results can be interpreted as game skill. See
 [VALIDATION.md](docs/VALIDATION.md) for tested behavior and remaining limitations.
 

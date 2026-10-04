@@ -25,5 +25,5 @@ jobs:
       - name: Masked PPO smoke test
         run: >-
           .venv/bin/python train.py --timesteps 256 --n-envs 2 --n-steps 32
-          --eval-freq 128 --eval-episodes 4 --enemies LouseNormal LouseDefensive
+          --eval-freq 128 --eval-episodes 4 --enemies Sentry Sentry Sentry
           --save-path models/ci_smoke

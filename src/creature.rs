@@ -51,6 +51,13 @@ impl CreatureState {
 
     pub fn apply_power(&mut self, id: PowerId, amount: i32) {
         if amount == 0 { return; }
+        let debuff = (amount > 0 && matches!(id,
+            PowerId::Weak | PowerId::Vulnerable | PowerId::Frail | PowerId::StrengthDown))
+            || (id == PowerId::Strength && amount < 0);
+        if debuff && self.power_amount(PowerId::Artifact) > 0 {
+            self.apply_power(PowerId::Artifact, -1);
+            return;
+        }
         if let Some(existing) = self.powers.iter_mut().find(|p| p.id() == id) {
             existing.stack(amount);
             self.powers.retain(|p| p.amount() != 0);
@@ -67,16 +74,18 @@ impl CreatureState {
             PowerId::Metalicize  => PowerState::Metalicize(MetalicizePower { stacks: amount }),
             PowerId::DemonForm   => PowerState::DemonForm(DemonFormPower { stacks: amount }),
             PowerId::StrengthDown=> PowerState::StrengthDown(StrengthDownPower { stacks: amount }),
+            PowerId::Artifact => PowerState::Artifact(crate::power::ArtifactPower { stacks: amount }),
         };
         self.powers.push(power);
     }
 
     pub fn apply_power_from_enemy(&mut self, id: PowerId, amount: i32) {
-        if amount > 0 && !self.has_power(id)
-            && matches!(id, PowerId::Vulnerable | PowerId::Weak | PowerId::Frail) {
+        let fresh = amount > 0 && !self.has_power(id)
+            && matches!(id, PowerId::Vulnerable | PowerId::Weak | PowerId::Frail);
+        self.apply_power(id, amount);
+        if fresh && self.has_power(id) {
             self.fresh_debuffs.push(id);
         }
-        self.apply_power(id, amount);
     }
 
     pub fn has_power(&self, id: PowerId) -> bool {

@@ -19,7 +19,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--timesteps", type=float, default=1_000_000)
     parser.add_argument("--n-envs", type=int, default=8)
-    parser.add_argument("--save-path", default="models/ppo_spire_v2")
+    parser.add_argument("--save-path", default=f"models/ppo_spire_v{rusted_spire.INTERFACE_VERSION}")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--enemies", nargs="+", default=["Cultist"])
     parser.add_argument("--ascension", type=int, default=7)

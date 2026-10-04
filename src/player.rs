@@ -66,13 +66,18 @@ impl PlayerState {
         self.creature.lose_block();
         self.creature.trigger_start_of_turn(); // DemonForm Strength, etc.
         self.energy = self.energy_master;
-        self.discard_hand(shuffle_rng);
         self.draw(HAND_SIZE, shuffle_rng);
     }
 
-    /// Move all cards in hand to discard (called at end of turn).
-    fn discard_hand(&mut self, _shuffle_rng: &mut Rng) {
-        self.discard_pile.append(&mut self.hand);
+    /// Exhaust Ethereal cards, then discard the rest before enemies act.
+    pub fn end_turn(&mut self) {
+        for card in self.hand.drain(..) {
+            if crate::card::is_ethereal(card.id) {
+                self.exhaust_pile.push(card);
+            } else {
+                self.discard_pile.push(card);
+            }
+        }
     }
 }
 

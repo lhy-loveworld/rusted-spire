@@ -67,15 +67,15 @@ fn each_enemy_has_its_own_power_features_and_dead_slots_compact() {
 
 #[test]
 fn dead_entries_do_not_hide_spawned_children() {
-    let mut s = state(&[CardId::Strike], &[EnemyId::AcidSlimeMedium]);
-    s.enemies[0].creature.hp = 1;
+    let mut s = state(&[CardId::Strike], &[EnemyId::AcidSlimeLarge]);
+    s.enemies[0].creature.hp = s.enemies[0].creature.max_hp / 2 + 1;
     step(&mut s, Action::PlayCard { hand_idx: 0, target_idx: 0 });
+    step(&mut s, Action::EndTurn);
     assert_eq!(enemy_indices(&s), vec![1, 2]);
     assert!(fits_observation(&s));
     let obs = encode_obs(&s);
     assert_eq!(obs[ENEMY_OFFSET], 1.0);
     assert_eq!(obs[ENEMY_OFFSET + ENEMY_FEATURES], 1.0);
-    step(&mut s, Action::EndTurn);
     assert!(action_mask(&s)[0] && action_mask(&s)[1]);
 }
 

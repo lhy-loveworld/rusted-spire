@@ -43,6 +43,7 @@ pub enum Intent {
     Buff,
     Debuff,
     Defend,
+    Split,
     Unknown,
 }
 
@@ -102,11 +103,10 @@ impl EnemyState {
             (GremlinNob, GREMLIN_NOB_SKULL_BASH) => if asc >= 3 { 8 } else { 6 },
             (GremlinNob, GREMLIN_NOB_BULL_RUSH) => if asc >= 3 { 16 } else { 14 },
             (Lagavulin, LAG_MAUL) => if asc >= 8 { 20 } else { 18 },
-            (Sentry, SENTRY_BEAM) => if asc >= 8 { 10 } else { 9 },
-            (Sentry, SENTRY_BOLT) => if asc >= 8 { 30 } else { 25 },
-            (SlimeBoss, SLIME_BOSS_SLAM) => if asc >= 3 { 42 } else { 38 },
+            (Sentry, SENTRY_BEAM) => if asc >= 3 { 10 } else { 9 },
+            (SlimeBoss, SLIME_BOSS_SLAM) => if asc >= 4 { 38 } else { 35 },
             (AcidSlimeLarge, ACID_M_SPIT) => if asc >= 2 { 12 } else { 11 },
-            (AcidSlimeLarge, ACID_M_TACKLE) => if asc >= 2 { 16 } else { 14 },
+            (AcidSlimeLarge, ACID_M_TACKLE) => if asc >= 2 { 18 } else { 16 },
             (SpikeSlimeLarge, SPIKE_M_TACKLE) => if asc >= 2 { 18 } else { 16 },
             (TheGuardian, GUARDIAN_TAIL_WHIP) => if asc >= 3 { 9 } else { 8 },
             (TheGuardian, GUARDIAN_WHIRLWIND) =>
@@ -163,26 +163,49 @@ impl EnemyState {
         }
     }
 
-    /// Spawn child enemies when this enemy dies (slime splits, boss splits).
-    pub fn spawn_on_death(&self, hp_rng: &mut Rng, ai_rng: &mut Rng) -> Vec<EnemyState> {
-        match self.id {
-            EnemyId::AcidSlimeMedium =>
-                vec![EnemyState::new(EnemyId::AcidSlimeSmall, self.ascension, hp_rng, ai_rng),
-                     EnemyState::new(EnemyId::AcidSlimeSmall, self.ascension, hp_rng, ai_rng)],
-            EnemyId::SpikeSlimeMedium =>
-                vec![EnemyState::new(EnemyId::SpikeSlimeSmall, self.ascension, hp_rng, ai_rng),
-                     EnemyState::new(EnemyId::SpikeSlimeSmall, self.ascension, hp_rng, ai_rng)],
-            EnemyId::AcidSlimeLarge =>
-                vec![EnemyState::new(EnemyId::AcidSlimeMedium, self.ascension, hp_rng, ai_rng),
-                     EnemyState::new(EnemyId::AcidSlimeMedium, self.ascension, hp_rng, ai_rng)],
-            EnemyId::SpikeSlimeLarge =>
-                vec![EnemyState::new(EnemyId::SpikeSlimeMedium, self.ascension, hp_rng, ai_rng),
-                     EnemyState::new(EnemyId::SpikeSlimeMedium, self.ascension, hp_rng, ai_rng)],
-            EnemyId::SlimeBoss =>
-                vec![EnemyState::new(EnemyId::AcidSlimeLarge, self.ascension, hp_rng, ai_rng),
-                     EnemyState::new(EnemyId::SpikeSlimeLarge, self.ascension, hp_rng, ai_rng)],
-            _ => vec![],
+    /// Sentries alternate by their original formation position, without an RNG roll.
+    pub fn set_formation_position(&mut self, position: usize) {
+        if self.id == EnemyId::Sentry {
+            (self.next_move, self.intent) = if position % 2 == 0 {
+                (SENTRY_BOLT, Intent::Debuff)
+            } else {
+                (SENTRY_BEAM, Intent::Attack(if self.ascension >= 3 { 10 } else { 9 }))
+            };
         }
+    }
+
+    /// A surviving large slime interrupts its queued move at half HP.
+    pub fn queue_split_if_needed(&mut self) {
+        if !self.is_dead() && self.creature.hp <= self.creature.max_hp / 2
+            && matches!(self.id, EnemyId::SlimeBoss | EnemyId::AcidSlimeLarge | EnemyId::SpikeSlimeLarge) {
+            self.next_move = SLIME_SPLIT;
+            self.intent = Intent::Split;
+        }
+    }
+
+    pub fn is_splitting(&self) -> bool {
+        self.next_move == SLIME_SPLIT
+            && matches!(self.id, EnemyId::SlimeBoss | EnemyId::AcidSlimeLarge | EnemyId::SpikeSlimeLarge)
+    }
+
+    /// Split at execution-time HP. Children have fresh powers and that HP as max HP.
+    pub fn split_children(&self, ai_rng: &mut Rng) -> Vec<EnemyState> {
+        assert!(self.is_splitting() && !self.is_dead());
+        let ids = match self.id {
+            EnemyId::AcidSlimeLarge => [EnemyId::AcidSlimeMedium; 2],
+            EnemyId::SpikeSlimeLarge => [EnemyId::SpikeSlimeMedium; 2],
+            EnemyId::SlimeBoss => [EnemyId::SpikeSlimeLarge, EnemyId::AcidSlimeLarge],
+            _ => unreachable!(),
+        };
+        ids.into_iter().map(|id| {
+            let mut child = EnemyState {
+                id, creature: CreatureState::new(self.creature.hp, self.creature.hp),
+                ascension: self.ascension, var_damage: 0, next_move: 0,
+                move_history: vec![], intent: Intent::Unknown, death_processed: false,
+            };
+            child.roll_move(ai_rng, true);
+            child
+        }).collect()
     }
 }
 
@@ -197,10 +220,10 @@ fn hp_range(id: EnemyId, asc: u8) -> (i32, i32) {
         EnemyId::LouseNormal    => if asc >= 7 { (11, 16) } else { (10, 15) },
         EnemyId::LouseDefensive => if asc >= 7 { (12, 18) } else { (11, 17) },
         EnemyId::FungiBeast     => if asc >= 7 { (24, 28) } else { (22, 28) },
-        EnemyId::AcidSlimeSmall => if asc >= 7 { (9, 12)  } else { (8, 12)  },
-        EnemyId::AcidSlimeMedium=> if asc >= 7 { (32, 38) } else { (28, 32) },
-        EnemyId::SpikeSlimeSmall=> if asc >= 7 { (11, 14) } else { (10, 14) },
-        EnemyId::SpikeSlimeMedium=>if asc >= 7 { (32, 38) } else { (28, 32) },
+        EnemyId::AcidSlimeSmall => if asc >= 7 { (9, 13)  } else { (8, 12)  },
+        EnemyId::AcidSlimeMedium=> if asc >= 7 { (29, 34) } else { (28, 32) },
+        EnemyId::SpikeSlimeSmall=> if asc >= 7 { (11, 15) } else { (10, 14) },
+        EnemyId::SpikeSlimeMedium=>if asc >= 7 { (29, 34) } else { (28, 32) },
         EnemyId::MadGremlin     => if asc >= 7 { (21, 25) } else { (20, 24) },
         EnemyId::SneakyGremlin  => if asc >= 7 { (11, 15) } else { (10, 14) },
         EnemyId::FatGremlin     => if asc >= 7 { (14, 18) } else { (13, 17) },
@@ -209,9 +232,9 @@ fn hp_range(id: EnemyId, asc: u8) -> (i32, i32) {
         EnemyId::GremlinNob     => if asc >= 8 { (85, 90) } else { (82, 86) },
         EnemyId::Lagavulin      => if asc >= 8 { (112, 115) } else { (109, 112) },
         EnemyId::Sentry         => if asc >= 8 { (39, 45) } else { (38, 42) },
-        EnemyId::SlimeBoss      => if asc >= 3 { (150, 150) } else { (140, 140) },
-        EnemyId::AcidSlimeLarge => if asc >= 8 { (68, 72) } else { (65, 70) },
-        EnemyId::SpikeSlimeLarge=> if asc >= 8 { (68, 72) } else { (65, 70) },
+        EnemyId::SlimeBoss      => if asc >= 9 { (150, 150) } else { (140, 140) },
+        EnemyId::AcidSlimeLarge => if asc >= 7 { (68, 72) } else { (65, 69) },
+        EnemyId::SpikeSlimeLarge=> if asc >= 7 { (67, 73) } else { (64, 70) },
         EnemyId::TheGuardian    => if asc >= 3 { (250, 250) } else { (235, 250) },
     }
 }
@@ -220,13 +243,13 @@ fn extra_damage_roll(id: EnemyId, asc: u8, rng: &mut Rng) -> i32 {
     match id {
         EnemyId::LouseNormal | EnemyId::LouseDefensive =>
             if asc >= 2 { rng.random_range(6, 8) } else { rng.random_range(5, 7) },
-        EnemyId::Sentry => rng.random_int(1), // 0 or 1: stagger offset for beam/bolt cycle
         _ => 0,
     }
 }
 
 fn apply_pre_battle(creature: &mut CreatureState, id: EnemyId, asc: u8, rng: &mut Rng) {
     match id {
+        EnemyId::Sentry => creature.apply_power(PowerId::Artifact, 1),
         EnemyId::LouseNormal | EnemyId::LouseDefensive => {
             let curl = if asc >= 17 { rng.random_range(9, 12) }
                        else if asc >= 7 { rng.random_range(4, 8) }
@@ -264,7 +287,6 @@ const ACID_M_SPIT:   u8 = 1;
 const ACID_M_LICK:   u8 = 2;
 const ACID_M_TACKLE: u8 = 3;
 const SPIKE_S_TACKLE: u8 = 1;
-const SPIKE_S_LICK:   u8 = 2;
 const SPIKE_M_TACKLE: u8 = 1;
 const SPIKE_M_LICK:   u8 = 2;
 
@@ -290,6 +312,7 @@ const SENTRY_BOLT: u8 = 2;
 const SLIME_BOSS_GOOP:      u8 = 1;
 const SLIME_BOSS_PREPARING: u8 = 2;
 const SLIME_BOSS_SLAM:      u8 = 3;
+const SLIME_SPLIT:          u8 = 4;
 
 const GUARDIAN_TAIL_WHIP:  u8 = 1;
 const GUARDIAN_CHARGE_UP:  u8 = 2;
@@ -318,7 +341,7 @@ fn get_move(id: EnemyId, roll: i32, history: &[u8], first_move: bool,
         EnemyId::GremlinWizard  => wizard_get_move(history),
         EnemyId::GremlinNob     => gremlin_nob_get_move(roll, history, first_move, creature, asc),
         EnemyId::Lagavulin      => lagavulin_get_move(history, first_move, creature, asc),
-        EnemyId::Sentry         => sentry_get_move(history, var_damage, asc),
+        EnemyId::Sentry         => sentry_get_move(history, asc),
         EnemyId::SlimeBoss      => slime_boss_get_move(history, first_move, asc),
         EnemyId::AcidSlimeLarge => acid_large_get_move(roll, history),
         EnemyId::SpikeSlimeLarge=> spike_large_get_move(roll, history),
@@ -504,7 +527,7 @@ fn acid_small_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
 }
 
 // ---------------------------------------------------------------------------
-// Acid Slime (Medium) — splits into 2× Small on death
+// Acid Slime (Medium)
 // ---------------------------------------------------------------------------
 
 fn acid_medium_get_move(roll: i32, history: &[u8]) -> (u8, Intent) {
@@ -528,10 +551,9 @@ fn acid_medium_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
         ACID_M_SPIT => {
             let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
-            player.apply_power_from_enemy(PowerId::Weak, 1);
         }
         ACID_M_LICK => {
-            player.apply_power_from_enemy(PowerId::Weak, 2);
+            player.apply_power_from_enemy(PowerId::Weak, 1);
         }
         ACID_M_TACKLE => {
             let dmg = enemy.attack_damage(player);
@@ -545,14 +567,8 @@ fn acid_medium_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
 // Spike Slime (Small)
 // ---------------------------------------------------------------------------
 
-fn spike_small_get_move(roll: i32, history: &[u8]) -> (u8, Intent) {
-    let last_two = |mv| history.len() >= 2 && history[history.len()-1] == mv && history[history.len()-2] == mv;
-    if roll < 30 {
-        if last_two(SPIKE_S_LICK) { return (SPIKE_S_TACKLE, Intent::AttackDebuff(5)); }
-        return (SPIKE_S_LICK, Intent::Debuff);
-    }
-    if last_two(SPIKE_S_TACKLE) { return (SPIKE_S_LICK, Intent::Debuff); }
-    (SPIKE_S_TACKLE, Intent::AttackDebuff(5))
+fn spike_small_get_move(_roll: i32, _history: &[u8]) -> (u8, Intent) {
+    (SPIKE_S_TACKLE, Intent::Attack(5))
 }
 
 fn spike_small_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
@@ -560,17 +576,13 @@ fn spike_small_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
         SPIKE_S_TACKLE => {
             let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
-            // Add Slimed to player discard
-        }
-        SPIKE_S_LICK => {
-            // Add Slimed to player discard — handled in combat.rs via slimed_move check
         }
         _ => {}
     }
 }
 
 // ---------------------------------------------------------------------------
-// Spike Slime (Medium) — splits into 2× Small on death
+// Spike Slime (Medium)
 // ---------------------------------------------------------------------------
 
 fn spike_medium_get_move(roll: i32, history: &[u8]) -> (u8, Intent) {
@@ -589,7 +601,7 @@ fn spike_medium_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
             let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
         }
-        SPIKE_M_LICK => { /* Slimed handled in combat.rs */ }
+        SPIKE_M_LICK => { player.apply_power_from_enemy(PowerId::Frail, 1); }
         _ => {}
     }
 }
@@ -720,15 +732,11 @@ fn lagavulin_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
 // Sentry (Elite — encountered as group of 3)
 // ---------------------------------------------------------------------------
 
-fn sentry_get_move(history: &[u8], var_damage: i32, asc: u8) -> (u8, Intent) {
-    let beam_dmg = if asc >= 8 { 10 } else { 9 };
-    let bolt_dmg = if asc >= 8 { 30 } else { 25 };
-    // Alternate Beam/Bolt; var_damage (0 or 1) staggers phase offset
-    let pos = (history.len() + var_damage as usize) % 2;
-    if pos == 0 {
-        (SENTRY_BEAM, Intent::Attack(beam_dmg))
+fn sentry_get_move(history: &[u8], asc: u8) -> (u8, Intent) {
+    if history.last() == Some(&SENTRY_BOLT) {
+        (SENTRY_BEAM, Intent::Attack(if asc >= 3 { 10 } else { 9 }))
     } else {
-        (SENTRY_BOLT, Intent::Attack(bolt_dmg))
+        (SENTRY_BOLT, Intent::Debuff)
     }
 }
 
@@ -738,37 +746,31 @@ fn sentry_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
             let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
         }
-        SENTRY_BOLT => {
-            let dmg = enemy.attack_damage(player);
-            crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
-        }
+        SENTRY_BOLT => { /* Dazed cards added by combat.rs */ }
         _ => {}
     }
 }
 
 // ---------------------------------------------------------------------------
-// Slime Boss — splits into AcidSlimeLarge + SpikeSlimeLarge on death
+// Slime Boss — prepares a split at half HP
 // ---------------------------------------------------------------------------
 
-fn slime_boss_get_move(history: &[u8], first_move: bool, _asc: u8) -> (u8, Intent) {
+fn slime_boss_get_move(history: &[u8], first_move: bool, asc: u8) -> (u8, Intent) {
     if first_move { return (SLIME_BOSS_GOOP, Intent::Debuff); }
-    let cycle = history.len() % 3;
-    match cycle {
-        0 => (SLIME_BOSS_GOOP,      Intent::Debuff),
-        1 => (SLIME_BOSS_PREPARING, Intent::Buff),
-        _ => (SLIME_BOSS_SLAM,      Intent::Attack(38)),
+    match history.last().copied() {
+        Some(SLIME_BOSS_GOOP) => (SLIME_BOSS_PREPARING, Intent::Unknown),
+        Some(SLIME_BOSS_PREPARING) => (SLIME_BOSS_SLAM, Intent::Attack(if asc >= 4 { 38 } else { 35 })),
+        _ => (SLIME_BOSS_GOOP, Intent::Debuff),
     }
 }
 
 fn slime_boss_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
     match enemy.next_move {
         SLIME_BOSS_GOOP => {
-            // Slimed cards added in combat.rs via slimed_move() hook — here just debuff intent
+            // Slimed cards added in combat.rs.
             let _ = player; // player receives Slimed cards, handled externally
         }
-        SLIME_BOSS_PREPARING => {
-            enemy.creature.add_block(if enemy.ascension >= 3 { 15 } else { 12 });
-        }
+        SLIME_BOSS_PREPARING => {}
         SLIME_BOSS_SLAM => {
             let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
@@ -788,11 +790,11 @@ fn acid_large_get_move(roll: i32, history: &[u8]) -> (u8, Intent) {
         return (ACID_M_SPIT, Intent::AttackDebuff(11));
     }
     if roll < 70 {
-        if last_two(ACID_M_LICK) { return (ACID_M_TACKLE, Intent::Attack(14)); }
+        if last_two(ACID_M_LICK) { return (ACID_M_TACKLE, Intent::Attack(16)); }
         return (ACID_M_LICK, Intent::Debuff);
     }
     if last_two(ACID_M_TACKLE) { return (ACID_M_SPIT, Intent::AttackDebuff(11)); }
-    (ACID_M_TACKLE, Intent::Attack(14))
+    (ACID_M_TACKLE, Intent::Attack(16))
 }
 
 fn acid_large_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
@@ -800,7 +802,6 @@ fn acid_large_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
         ACID_M_SPIT => {
             let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
-            player.apply_power_from_enemy(PowerId::Weak, 2);
         }
         ACID_M_LICK => { player.apply_power_from_enemy(PowerId::Weak, 2); }
         ACID_M_TACKLE => {
@@ -827,7 +828,7 @@ fn spike_large_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
             let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
         }
-        SPIKE_M_LICK => { /* Slimed handled externally */ }
+        SPIKE_M_LICK => { player.apply_power_from_enemy(PowerId::Frail, if enemy.ascension >= 17 { 3 } else { 2 }); }
         _ => {}
     }
 }

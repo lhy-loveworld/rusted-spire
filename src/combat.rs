@@ -52,7 +52,12 @@ impl CombatState {
 
         let enemies = enemy_ids
             .iter()
-            .map(|&id| EnemyState::new(id, ascension, &mut rng.monster_hp, &mut rng.ai))
+            .enumerate()
+            .map(|(position, &id)| {
+                let mut enemy = EnemyState::new(id, ascension, &mut rng.monster_hp, &mut rng.ai);
+                enemy.set_formation_position(position);
+                enemy
+            })
             .collect();
 
         let mut player = PlayerState::new(starting_hp, Self::MAX_HP, 3, deck, &mut rng.shuffle);
@@ -381,7 +386,7 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
         CardId::Slimed => {
             state.player.exhaust_from_hand(hand_idx);
         }
-        CardId::Wound => {
+        CardId::Wound | CardId::Dazed => {
             // Unplayable — should never reach here
             state.player.discard_from_hand(hand_idx);
         }
@@ -431,10 +436,13 @@ fn deal_all(state: &mut CombatState, base: i32) {
     }
 }
 
-/// Process death effects for enemy at `idx` if it just died and hasn't been processed yet.
-/// Spawns children (slime splits) and applies on-death power effects to the player.
+/// Interrupt surviving slimes at half HP, or process a death exactly once.
 fn process_death(state: &mut CombatState, idx: usize) {
-    if !state.enemies[idx].is_dead() || state.enemies[idx].death_processed {
+    if !state.enemies[idx].is_dead() {
+        state.enemies[idx].queue_split_if_needed();
+        return;
+    }
+    if state.enemies[idx].death_processed {
         return;
     }
     state.enemies[idx].death_processed = true;
@@ -443,10 +451,6 @@ fn process_death(state: &mut CombatState, idx: usize) {
     if let Some((pid, amt)) = state.enemies[idx].on_death_effect() {
         state.player.creature.apply_power(pid, amt);
     }
-
-    // Slime splits: spawn children into state.enemies
-    let children = state.enemies[idx].spawn_on_death(&mut state.rng.monster_hp, &mut state.rng.ai);
-    state.enemies.extend(children);
 }
 
 // ---------------------------------------------------------------------------
@@ -455,6 +459,7 @@ fn process_death(state: &mut CombatState, idx: usize) {
 
 fn end_player_turn(state: &mut CombatState) {
     state.player.creature.tick_powers_end_of_turn(true);
+    state.player.end_turn();
 
     // Clear the previous round's block before any enemy acts. Block gained
     // during this enemy phase must survive through the next player turn.
@@ -462,18 +467,29 @@ fn end_player_turn(state: &mut CombatState) {
         enemy.creature.lose_block();
     }
 
-    let enemy_count = state.enemies.len();
-    for i in 0..enemy_count {
-        if state.enemies[i].is_dead() { continue; }
-        state.enemies[i].creature.trigger_start_of_turn(); // Metalicize etc.
+    let mut i = 0;
+    while i < state.enemies.len() {
+        if state.enemies[i].is_dead() { i += 1; continue; }
+        state.enemies[i].creature.trigger_start_of_turn();
+        if state.enemies[i].is_splitting() {
+            let children = state.enemies[i].split_children(&mut state.rng.ai);
+            state.enemies[i].creature.hp = 0;
+            state.enemies[i].death_processed = true;
+            let count = children.len();
+            // Preserve formation order; newborns do not act this phase.
+            state.enemies.splice(i + 1..i + 1, children);
+            i += 1 + count;
+            continue;
+        }
         let queued_move = state.enemies[i].next_move;
         let enemy_id    = state.enemies[i].id;
+        let ascension   = state.enemies[i].ascension;
         state.enemies[i].take_turn(&mut state.player.creature, &mut state.rng.ai);
-        // Post-turn Slimed card spawning for slime enemies
-        slimed_cards_for_move(enemy_id, queued_move, &mut state.player.discard_pile);
+        status_cards_for_move(enemy_id, queued_move, ascension, &mut state.player.discard_pile);
         if state.player.creature.is_dead() {
             return;
         }
+        i += 1;
     }
 
     // End-of-round powers run only after every enemy has acted.
@@ -490,19 +506,17 @@ fn end_player_turn(state: &mut CombatState) {
     state.phase = CombatPhase::PlayerTurn;
 }
 
-/// Adds Slimed status cards to the player's discard pile based on which move the enemy used.
-fn slimed_cards_for_move(id: EnemyId, mv: u8, discard: &mut Vec<Card>) {
-    let count: usize = match id {
-        EnemyId::SpikeSlimeSmall  => match mv { 1 | 2 => 1, _ => 0 }, // TACKLE or LICK
-        EnemyId::SpikeSlimeMedium => match mv { 1 | 2 => 2, _ => 0 }, // TACKLE or LICK
-        EnemyId::SpikeSlimeLarge  => match mv { 1 | 2 => 3, _ => 0 },
-        EnemyId::AcidSlimeMedium  => match mv { 1 => 2, _ => 0 },      // SPIT only
-        EnemyId::AcidSlimeLarge   => match mv { 1 => 3, _ => 0 },
-        EnemyId::SlimeBoss        => match mv { 1 => 5, _ => 0 },       // GOOP_SPRAY
-        _ => 0,
+/// Enemy-generated statuses enter discard, even if their attack was blocked.
+fn status_cards_for_move(id: EnemyId, mv: u8, asc: u8, discard: &mut Vec<Card>) {
+    let (card, count) = match (id, mv) {
+        (EnemyId::Sentry, 2) => (CardId::Dazed, if asc >= 18 { 3 } else { 2 }),
+        (EnemyId::SpikeSlimeMedium | EnemyId::AcidSlimeMedium, 1) => (CardId::Slimed, 1),
+        (EnemyId::SpikeSlimeLarge | EnemyId::AcidSlimeLarge, 1) => (CardId::Slimed, 2),
+        (EnemyId::SlimeBoss, 1) => (CardId::Slimed, if asc >= 19 { 5 } else { 3 }),
+        _ => return,
     };
     for _ in 0..count {
-        discard.push(Card::new(CardId::Slimed));
+        discard.push(Card::new(card));
     }
 }
 
