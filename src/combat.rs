@@ -657,8 +657,9 @@ mod tests {
         deck.push(Card::new(CardId::Bash));
         let mut state = CombatState::new(deck, &[EnemyId::JawWorm], 0, 0, CombatState::MAX_HP);
 
-        // Find Flex in hand
-        let flex_idx = state.player.hand.iter().position(|c| c.id == CardId::Flex).unwrap();
+        // This test concerns power timing, not a particular shuffled opening.
+        state.player.hand = vec![Card::new(CardId::Flex)];
+        let flex_idx = 0;
         step(&mut state, Action::PlayCard { hand_idx: flex_idx, target_idx: 0 });
         assert_eq!(state.player.creature.power_amount(PowerId::Strength), 2);
 
@@ -673,7 +674,8 @@ mod tests {
         for _ in 0..9 { deck.push(Card::new(CardId::Strike)); }
         let mut state = CombatState::new(deck, &[EnemyId::JawWorm], 0, 0, CombatState::MAX_HP);
 
-        let df_idx = state.player.hand.iter().position(|c| c.id == CardId::DemonForm).unwrap();
+        state.player.hand = vec![Card::new(CardId::DemonForm)];
+        let df_idx = 0;
         step(&mut state, Action::PlayCard { hand_idx: df_idx, target_idx: 0 });
 
         step(&mut state, Action::EndTurn); // turn 2 starts

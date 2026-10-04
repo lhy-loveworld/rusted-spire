@@ -39,8 +39,9 @@ Total files: ~2008 Java classes.
 ## Core Mechanics (start here)
 
 ### `random/Random.java`
-The game's RNG — libGDX `RandomXS128` xorshift128+ implementation.  
-**Key methods:** `random(int bound)`, `random(long bound)`, `nextLong()`, `setSeed(long s1, long s2)`  
+The game's counter/inclusive-bound wrapper around libGDX `RandomXS128`.
+**Key methods:** `random(int range)`, `random(int start, int end)`, `randomLong()`, `randomBoolean()`.
+The underlying generator is `com/badlogic/gdx/math/RandomXS128.java` (outside the cardcrawl root).
 → Rust equivalent: `src/rng.rs`
 
 ### `core/AbstractCreature.java`
@@ -258,7 +259,9 @@ From `dungeons/AbstractDungeon.java`:
 | `miscRng` | Miscellaneous |
 | `relicRng` | Relic selection |
 
-All seeded from the run seed via `Random(seed + offset)` where offset increments per stream.  
+`generateSeeds()` initializes independent streams with the same run seed.
+On floor transitions, combat HP/AI/shuffle/card/misc streams are reset with
+run seed + floor number (see `nextRoomTransition()`). There are no per-stream offsets.
 → Rust equivalent: `src/rng.rs` `RngBundle`
 
 ---
@@ -267,7 +270,7 @@ All seeded from the run seed via `Random(seed + offset)` where offset increments
 
 | Topic | File(s) |
 |-------|---------|
-| RNG implementation | `random/Random.java` |
+| RNG implementation | `random/Random.java`; `com/badlogic/gdx/math/RandomXS128.java` outside this root |
 | Damage calculation | `core/AbstractCreature.java` (`damage()`), `cards/DamageInfo.java` |
 | Power hooks | `powers/AbstractPower.java` |
 | Card execution | `cards/AbstractCard.java` (`use()`), `actions/utility/UseCardAction.java` |
@@ -281,7 +284,7 @@ All seeded from the run seed via `Random(seed + offset)` where offset increments
 | Ironclad character | `characters/Ironclad.java` |
 | Player mechanics | `characters/AbstractPlayer.java` |
 | Energy system | `core/EnergyManager.java` |
-| Deck shuffle | `characters/AbstractPlayer.java` (`drawCards()`) |
+| Deck shuffle | `cards/CardGroup.java` (`shuffle()`, `initializeDeck()`); `actions/common/EmptyDeckShuffleAction.java`; `cards/Soul.java` |
 | Block reset | `core/AbstractCreature.java` (`loseBlock()` / `applyEndOfTurnTriggers()`) |
 | Act 1 encounters | `dungeons/Exordium.java` |
 | Gremlin Nob AI | `monsters/exordium/GremlinNob.java` |

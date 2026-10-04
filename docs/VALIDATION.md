@@ -6,7 +6,8 @@ tests establishes the tested contracts, not full Slay the Spire parity.
 The original decompiled Java sources are now accessible in WSL.
 The initial static comparison is recorded in [JAVA_AUDIT.md](JAVA_AUDIT.md),
 including supported behavior and confirmed remaining differences. The sources
-remain gitignored; no live Java/Rust differential execution has been performed.
+remain gitignored. A limited Java RNG/shuffle harness now generates fixtures
+checked by Rust; no live full-game combat differential execution has been performed.
 
 ## Power and intent corrections (2026-10-03)
 
@@ -71,9 +72,25 @@ round-end hooks.
 Validation: 63 Rust tests and 15 Python/Gymnasium tests pass, including eight
 new AI/power tests and the existing 100 seeded combat episodes. Tests exercise
 all primary AI rolls, ascension boundaries, repeat histories, fallback outcomes
-and RNG call counts. The Java sources are references, not an executed oracle.
+and RNG call counts. For these AI/power tests, the Java sources are static references.
 Interface v3 dimensions are unchanged; v3 policies need reevaluation because
 combat behavior and subsequent seeded outcomes changed.
+
+## Executed Java RNG and shuffle reference
+
+The local `RandomXS128.java` was compiled unchanged and executed alongside
+JDK `Collections.shuffle`. All 1,283 fixture cases match Rust: inclusive bounded
+integers, a forced rejection/retry, signed seed bit patterns (including zero),
+booleans, probability checks, float bits, long bits, and shuffled draw order.
+The game wrapper and pile-direction mapping are based on static source inspection.
+See [RNG_VALIDATION.md](RNG_VALIDATION.md) for provenance, regeneration and limits.
+
+Corrections include integer sampling, boolean bit selection, identical starting
+seeds for independent combat streams, and one game RNG call per shuffle followed
+by a fresh Java-compatible 48-bit generator. Both initial decks and discard
+reshuffles are tested. Validation: 66 Rust tests and 15 Python/Gymnasium tests
+pass, including the existing 100 seeded episodes. No JDK or game installation
+is required to run the committed fixture tests.
 
 ## Remaining fidelity work
 
@@ -81,7 +98,8 @@ combat behavior and subsequent seeded outcomes changed.
   are still approximations.
 - Some cards automatically select a card for upgrade/exhaust/discard instead
   of exposing a choice. Card upgrade costs and other effects need an audit.
-- Java RNG sequence parity and live-game trace comparison are not established.
+- Full combat RNG call order and live-game trace comparison are not established;
+  the primitive/shuffle fixture agreement does not establish whole-combat parity.
 - Existing trained policies need reevaluation after combat correctness changes.
 
 ## WSL validation run (2026-10-03, interface v3)

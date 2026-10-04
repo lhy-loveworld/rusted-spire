@@ -16,8 +16,10 @@ turn/round power timing, explicit multi-enemy targeting and observations (v3),
 Gymnasium seeding/truncation, Sentry Artifact/Dazed, and half-HP slime splits.
 The local Java audit also guided slime AI probabilities/repetition, direct
 move changes, Demon Form's post-draw timing, and round-end hook ordering.
+RNG primitives and deck shuffles now match executed Java fixtures; combat
+streams start independently from the same effective combat seed.
 Training and seeded evaluation scripts are available, with CI coverage.
-Next priorities are original-game trace comparison,
+Next priorities are constructor/effect RNG call-order audits and original-game trace comparison,
 enemy/card fidelity (Lagavulin, Guardian, card choices), and meaningful
 held-out training experiments. Java parity has not been established. See
 README.md and docs/VALIDATION.md for setup, evidence, and interface limits.
@@ -46,7 +48,8 @@ Source: `com/megacrit/cardcrawl/random/Random.java`
 - [x] Implement `RngBundle` holding all named streams: `ai`, `shuffle`, `card`, `monster_hp`, `relic`, `potion`, `misc`
 - [x] Seed `RngBundle` from a single `u64` master seed
 - [x] Unit tests: determinism, copy independence, range bounds, float unit interval
-- [ ] Cross-check: verify sequence matches known Java outputs for a fixed seed
+- [x] Cross-check: 1,283 executed Java cases across seven seeds, boundary values, bounded retries, and deck shuffles
+- [ ] Validate full combat RNG consumption against original-game traces
 
 ---
 
@@ -192,4 +195,4 @@ Source: `GameActionManager`, `AbstractDungeon`, `AbstractPlayer`, `AbstractMonst
 - Ascension levels
 - Daily challenges / modifiers
 - Multiplayer / co-op (Spire with Friends mod)
-- Exact pixel-perfect RNG match with the Java game (nice to have, not required for RL)
+- Full-run RNG replay across maps, events and rewards (combat RNG validation remains in scope)

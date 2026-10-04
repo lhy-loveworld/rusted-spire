@@ -1,0 +1,15 @@
+{
+  "scope": "Executed local RandomXS128 and JDK Collections.shuffle; game wrapper call mapping is static.",
+  "java_version": "openjdk version \"21.0.12.1\" 2026-08-18\nOpenJDK Runtime Environment (build 21.0.12.1+1-1-24.04.4-Ubuntu)\nOpenJDK 64-Bit Server VM (build 21.0.12.1+1-1-24.04.4-Ubuntu, mixed mode, sharing)",
+  "fixture_sha256": "892bebcc92ec27846149f5340076741110661f07014b827b6cf247daf1eb53eb",
+  "sources": {
+    "decompiled/sources/com/badlogic/gdx/math/RandomXS128.java": "22c7697fe782f249de601c44d386df5d0739be2d4f57b0093d26e9ecda656df3",
+    "tools/RngOracle.java": "65c48f600c6b8c93b68b397c60a935cc44b320b32fd7822aeb276b87a7b04c39",
+    "decompiled/sources/com/megacrit/cardcrawl/random/Random.java": "7fcd8da0f16ca31d839b4192fa911ef8c116e3aa05dd4a3bda4596e632a87b41",
+    "decompiled/sources/com/megacrit/cardcrawl/cards/CardGroup.java": "54fa27a46aff9d975fa163af0d1082357bede71bb6ac9cbe79afa07f6a4034fb",
+    "decompiled/sources/com/megacrit/cardcrawl/cards/Soul.java": "9462179d926638abd1c045d09fa09b26e1154a6afdffad9cdfab5b09a316390d",
+    "decompiled/sources/com/megacrit/cardcrawl/actions/common/EmptyDeckShuffleAction.java": "febb3982c5b111399109bd24e7e944a81b706d0fd10e482b106c7feb4214ede8",
+    "decompiled/sources/com/megacrit/cardcrawl/dungeons/AbstractDungeon.java": "71a806abf3edfad698b95f47d7fbf715a4cb4014547f1be8e60c0f1c0e8013ac"
+  },
+  "rows": 1283
+}

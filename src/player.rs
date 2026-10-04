@@ -82,10 +82,7 @@ impl PlayerState {
     }
 }
 
-/// Fisher-Yates shuffle using the game's shuffle rng stream.
-fn shuffle(cards: &mut Vec<Card>, rng: &mut Rng) {
-    for i in (1..cards.len()).rev() {
-        let j = rng.random_int(i as i32) as usize;
-        cards.swap(i, j);
-    }
+/// Match CardGroup's Java shuffle, storing the next card at index zero.
+fn shuffle(cards: &mut [Card], rng: &mut Rng) {
+    crate::rng::shuffle_draw_pile(cards, rng);
 }

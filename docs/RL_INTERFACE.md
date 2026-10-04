@@ -67,6 +67,15 @@ Gymnasium's RNG, which supplies a reproducible stream of combat seeds across
 subsequent unseeded resets. Reset info includes the actual `combat_seed`.
 For an exact Rust seed, use `SlayEnv.reset(seed)` directly.
 
+The Rust seed is an **effective combat seed**, shared by independent AI,
+shuffle, HP, card and misc streams. The game reseeds these streams with run
+seed + floor; this simulator has no floor/run model. RNG primitives and deck
+shuffles now follow the [Java reference fixtures](RNG_VALIDATION.md), replacing
+the earlier stream offsets and shuffle algorithm. Identical numeric seeds
+therefore produce different episodes than earlier revisions. Interface v3
+dimensions are unchanged, but existing policies need reevaluation. Matching a
+whole original-game combat still requires validating random-call order.
+
 `max_steps` defaults to 1000; exceeding it produces `truncated=True`, distinct
 from victory/defeat (`terminated=True`). Reset is required after either. Invalid
 actions raise exceptions rather than consuming a step or mutating combat.
