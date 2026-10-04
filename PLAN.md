@@ -33,8 +33,11 @@ README.md and docs/VALIDATION.md for setup, evidence, and interface limits.
 Configurable decks/upgrades now reach Python, Gymnasium, training and evaluation;
 early/mid/late Act 1 snapshots and a preset-card source audit are in docs/DECKS.md.
 Card-in-use cleanup, draw boundaries, power removal and several upgrade effects
-are corrected. Next simulator priority: explicit card-selection actions, remaining
-card/enemy audits and controlled original-game combat traces before full-run expansion.
+are corrected. Explicit card selection is now implemented in interface v5 (242 observations /
+73 actions) for Armaments, True Grit+, Warcry and Headbutt, including paged discard
+choices and Armaments+ upgrade-all. See docs/CARD_SELECTION.md for evidence and
+validation. Next simulator priority: controlled original-game combat traces and
+remaining card/enemy audits before full-run expansion.
 
 ---
 

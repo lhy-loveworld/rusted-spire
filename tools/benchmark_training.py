@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import torch
+import rusted_spire
 from sb3_contrib import MaskablePPO
 
 from evaluate import evaluate
@@ -32,7 +33,7 @@ def main():
     parser.add_argument("--episodes", type=int, default=300)
     parser.add_argument("--start-seed", type=int, default=200000)
     parser.add_argument("--ascension", type=int, default=0)
-    parser.add_argument("--output", type=Path, default=ROOT / "models/benchmark_v4")
+    parser.add_argument("--output", type=Path, default=ROOT / f"models/benchmark_v{rusted_spire.INTERFACE_VERSION}")
     args = parser.parse_args()
     try:
         deck = resolve_deck(args)

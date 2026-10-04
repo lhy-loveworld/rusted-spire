@@ -16,11 +16,27 @@ pub struct CombatState {
     pub rng: RngBundle,
     pub turn: u32,
     pub phase: CombatPhase,
+    pub selection: Option<CardSelection>,
+}
+
+pub const SELECTION_PAGE_SIZE: usize = 10;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum SelectionKind { UpgradeHand, ExhaustHand, TopdeckHand, TopdeckDiscard }
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CardSelection {
+    pub kind: SelectionKind,
+    pub indices: Vec<usize>,
+    pub page: usize,
+    card_in_use: Card,
+    retaliation: Vec<i32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum CombatPhase {
     PlayerTurn,
+    SelectingCard,
     Over(CombatResult),
 }
 
@@ -37,6 +53,8 @@ pub enum CombatResult {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
     PlayCard { hand_idx: usize, target_idx: usize },
+    SelectCard { option_idx: usize },
+    SelectionPage { page: usize },
     EndTurn,
 }
 
@@ -69,6 +87,7 @@ impl CombatState {
             rng,
             turn: 1,
             phase: CombatPhase::PlayerTurn,
+            selection: None,
         };
         state.refresh_intents();
         state
@@ -88,6 +107,15 @@ impl CombatState {
 // ---------------------------------------------------------------------------
 
 pub fn available_actions(state: &CombatState) -> Vec<Action> {
+    if state.phase == CombatPhase::SelectingCard {
+        let choice = state.selection.as_ref().expect("selection phase without selection");
+        let start = choice.page * SELECTION_PAGE_SIZE;
+        let end = (start + SELECTION_PAGE_SIZE).min(choice.indices.len());
+        let mut actions: Vec<_> = (start..end).map(|option_idx| Action::SelectCard { option_idx }).collect();
+        if start > 0 { actions.push(Action::SelectionPage { page: choice.page - 1 }); }
+        if end < choice.indices.len() { actions.push(Action::SelectionPage { page: choice.page + 1 }); }
+        return actions;
+    }
     if state.phase != CombatPhase::PlayerTurn {
         return vec![];
     }
@@ -121,36 +149,30 @@ pub fn available_actions(state: &CombatState) -> Vec<Action> {
 // ---------------------------------------------------------------------------
 
 pub fn step(state: &mut CombatState, action: Action) -> Option<CombatResult> {
-    assert_eq!(state.phase, CombatPhase::PlayerTurn, "step called outside player turn");
+    assert!(!matches!(state.phase, CombatPhase::Over(_)), "step called after combat");
     assert!(available_actions(state).contains(&action), "illegal combat action");
 
     match action {
+        Action::SelectCard { option_idx } => {
+            let choice = state.selection.take().unwrap();
+            apply_selection(state, choice.kind, choice.indices[option_idx]);
+            state.phase = CombatPhase::PlayerTurn;
+            finish_card(state, choice.card_in_use, choice.retaliation);
+        }
+        Action::SelectionPage { page } => { state.selection.as_mut().unwrap().page = page; }
         Action::PlayCard { hand_idx, target_idx } => {
             play_card(state, hand_idx, target_idx);
-            if state.player.creature.is_dead() {
-                let result = CombatResult::Defeat;
-                state.phase = CombatPhase::Over(result.clone());
-                return Some(result);
-            }
-            if all_dead(&state.enemies) {
-                let result = CombatResult::Victory;
-                state.phase = CombatPhase::Over(result.clone());
-                return Some(result);
-            }
         }
         Action::EndTurn => {
             end_player_turn(state);
-            if state.player.creature.is_dead() {
-                let result = CombatResult::Defeat;
-                state.phase = CombatPhase::Over(result.clone());
-                return Some(result);
-            }
-            if all_dead(&state.enemies) {
-                let result = CombatResult::Victory;
-                state.phase = CombatPhase::Over(result.clone());
-                return Some(result);
-            }
         }
+    }
+    // Selection completion can resolve deferred retaliation and end combat.
+    if state.player.creature.is_dead() || all_dead(&state.enemies) {
+        let result = if state.player.creature.is_dead() { CombatResult::Defeat } else { CombatResult::Victory };
+        state.selection = None;
+        state.phase = CombatPhase::Over(result.clone());
+        return Some(result);
     }
     state.refresh_intents();
     None
@@ -170,6 +192,15 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
         state.enemies.iter().filter(|e| !e.is_dead())
             .map(|e| e.creature.power_amount(PowerId::SharpHide)).filter(|&n| n > 0).collect()
     } else { vec![] };
+    let mut selection_kind = None;
+
+    // AngerPower.onUseCard queues Strength at the TOP, before card effects
+    // and any selection prompt. Resolving a choice must not trigger it again.
+    if card_type(card.id) == CardType::Skill {
+        for e in &mut state.enemies {
+            if !e.is_dead() { e.creature.trigger_on_skill_played(); }
+        }
+    }
 
     match card.id {
         // --- basics ---
@@ -302,7 +333,11 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
         CardId::TrueGrit => {
             let base = if card.upgraded { 9 } else { 7 };
             state.player.creature.add_block(base);
-            if !state.player.hand.is_empty() {
+            if card.upgraded {
+                selection_kind = Some(SelectionKind::ExhaustHand);
+            } else if state.player.hand.len() == 1 {
+                state.player.exhaust_from_hand(0);
+            } else if !state.player.hand.is_empty() {
                 let index = state.rng.card.random_int((state.player.hand.len() - 1) as i32) as usize;
                 state.player.exhaust_from_hand(index);
             }
@@ -322,31 +357,23 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
             }
         }
         CardId::Armaments => {
-            let base = if card.upgraded { 5 } else { 5 };
-            state.player.creature.add_block(base);
-
-            // Upgrade mechanic omitted for now
+            state.player.creature.add_block(5);
+            if card.upgraded {
+                for c in &mut state.player.hand { c.upgrade(); }
+            } else {
+                selection_kind = Some(SelectionKind::UpgradeHand);
+            }
         }
         CardId::Warcry => {
             let draw_n = if card.upgraded { 2 } else { 1 };
-            let before = state.player.hand.len();
             state.player.draw(draw_n, &mut state.rng.shuffle);
-            let drew = state.player.hand.len() - before;
-            // Put last drawn card back on top of draw pile
-            if drew > 0 {
-                let top = state.player.hand.remove(state.player.hand.len() - 1);
-                state.player.draw_pile.insert(0, top);
-            }
+            selection_kind = Some(SelectionKind::TopdeckHand);
         }
         CardId::Headbutt => {
             let base = if card.upgraded { 12 } else { 9 };
             deal_to(state, target_idx, base);
-            // Topdeck last card from discard
-            if !state.player.discard_pile.is_empty() {
-                let last = state.player.discard_pile.len() - 1;
-                let card = state.player.discard_pile.remove(last);
-                state.player.draw_pile.insert(0, card);
-            }
+            // The Java discard selection action skips when battle is ending.
+            if !all_dead(&state.enemies) { selection_kind = Some(SelectionKind::TopdeckDiscard); }
         }
         CardId::Entrench => {
             let cur = state.player.creature.block;
@@ -374,14 +401,60 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
         }
     }
 
-    // Trigger Anger power on all living enemies when a Skill is played
-    if card_type(card.id) == CardType::Skill {
-        for e in &mut state.enemies {
-            if !e.is_dead() {
-                e.creature.trigger_on_skill_played();
-            }
+    if let Some(kind) = selection_kind {
+        let pile = if kind == SelectionKind::TopdeckDiscard { &state.player.discard_pile } else { &state.player.hand };
+        let indices: Vec<_> = pile.iter().enumerate()
+            .filter(|(_, c)| kind != SelectionKind::UpgradeHand || c.can_upgrade())
+            .map(|(i, _)| i).collect();
+        if indices.len() > 1 {
+            state.selection = Some(CardSelection { kind, indices, page: 0, card_in_use: card, retaliation });
+            state.phase = CombatPhase::SelectingCard;
+            return;
+        }
+        if let Some(&index) = indices.first() {
+            // PutOnDeckAction calls getRandomCard even for a singleton hand.
+            if kind == SelectionKind::TopdeckHand { state.rng.card.random_int(0); }
+            apply_selection(state, kind, index);
         }
     }
+    finish_card(state, card, retaliation);
+}
+
+pub fn selection_card(state: &CombatState, option_idx: usize) -> Option<&Card> {
+    let choice = state.selection.as_ref()?;
+    let index = *choice.indices.get(option_idx)?;
+    let pile = if choice.kind == SelectionKind::TopdeckDiscard { &state.player.discard_pile } else { &state.player.hand };
+    pile.get(index)
+}
+
+fn apply_selection(state: &mut CombatState, kind: SelectionKind, index: usize) {
+    match kind {
+        SelectionKind::UpgradeHand => {
+            if state.player.hand.iter().filter(|c| c.can_upgrade()).count() > 1 {
+                // ArmamentsAction returns the selected card, then cards that
+                // were removed from the selection because they cannot upgrade.
+                let mut chosen = state.player.hand.remove(index);
+                let (mut eligible, mut excluded): (Vec<_>, Vec<_>) =
+                    state.player.hand.drain(..).partition(|c| c.can_upgrade());
+                chosen.upgrade();
+                eligible.push(chosen);
+                eligible.append(&mut excluded);
+                state.player.hand = eligible;
+            } else { state.player.hand[index].upgrade(); }
+        }
+        SelectionKind::ExhaustHand => state.player.exhaust_from_hand(index),
+        SelectionKind::TopdeckHand => {
+            let card = state.player.hand.remove(index);
+            state.player.draw_pile.insert(0, card);
+        }
+        SelectionKind::TopdeckDiscard => {
+            let card = state.player.discard_pile.remove(index);
+            state.player.draw_pile.insert(0, card);
+        }
+    }
+}
+
+fn finish_card(state: &mut CombatState, card: Card, retaliation: Vec<i32>) {
     for damage in retaliation {
         state.player.creature.receive_damage(damage, DamageType::Thorns);
         if state.player.creature.is_dead() { break; }

@@ -95,20 +95,17 @@ timing are also tested. This is not a complete audit of every configurable card.
 
 ## Current limits
 
-Base Armaments, Warcry, Headbutt and upgraded True Grit require card-selection
-actions that interface v4 does not represent. Deck configuration rejects them
-with an explanation. Armaments+ is also rejected because its upgrade-all effect
-is not implemented. Their older Rust implementations remain incomplete;
-implementing selection states is the next step. Base True Grit remains usable
-with random exhaust. Other configurable cards can still have unaudited behavior,
-including Wild Strike's Wound placement and random targeting/selection order.
+Armaments, Armaments+, True Grit+, Headbutt and Warcry now work through
+interface v5's selection states. See [CARD_SELECTION.md](CARD_SELECTION.md)
+for choice timing, eligibility, automatic choices and source evidence. Base
+True Grit still exhausts randomly. Other configurable cards retain unaudited
+behavior, including Wild Strike's Wound placement and random targeting order.
 
-Interface v4 remains 196 observations / 61 actions. Deck composition is available
-as environment configuration, but full piles and draw order remain hidden from
-the policy. Existing v4 checkpoints still load, though changed card behavior and
-new decks require reevaluation. This feature supplies combat snapshots, not
-full Act 1 progression or proof of parity with the original game.
+Interface v5 has 242 observations / 73 actions; older checkpoints require
+retraining. Full piles and draw order remain hidden outside selection prompts.
+These are combat snapshots, not full Act 1 progression or proof of game parity.
 
+Historical validation of the initial configurable-deck milestone (v4):
 Validation: 89 Rust tests and 23 Python/Gym tests passed, including base/upgraded
 preset effects, power cleanup, exhausted skills, draw/reshuffle boundaries,
 configuration errors, isolated resets, and 40 preset elite/boss episodes. A

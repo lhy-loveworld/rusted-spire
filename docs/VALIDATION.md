@@ -97,8 +97,8 @@ is required to run the committed fixture tests.
 - Lagavulin and Guardian now have source-derived corrections; see
   [ELITE_BOSS_AUDIT.md](ELITE_BOSS_AUDIT.md). Other enemy AI/effects, queued Curl Up
   timing, and unsupported reactions still require audits.
-- Some cards automatically select a card for upgrade/exhaust/discard instead
-  of exposing a choice. Card upgrade costs and other effects need an audit.
+- Armaments, True Grit+, Warcry and Headbutt now expose choices (see below).
+  Other card effects and interactions still need audits.
 - Full combat RNG call order and live-game trace comparison are not established;
   the primitive/shuffle fixture agreement does not establish whole-combat parity.
 - Existing trained policies need reevaluation after combat correctness changes.
@@ -110,12 +110,27 @@ explicit decks and upgraded cards. Early/mid/late Act 1 presets use card effects
 checked against their Java classes. Card-in-use cleanup fixes self-reshuffling
 draw cards, powers entering exhaust, and Intimidate failing to exhaust. Entrench
 upgrade cost/block doubling and Sword Boomerang's upgrade damage were corrected.
-Selection-dependent cards are rejected by deck configuration until the action
-interface supports them. See [DECKS.md](DECKS.md) for scope and remaining gaps.
+This v4 milestone initially rejected selection-dependent cards; v5 now supports
+them as described below. See [DECKS.md](DECKS.md) for scope and remaining gaps.
 
 89 Rust tests and 23 Python/Gym tests passed. A custom-deck training/checkpoint
 reload smoke run and 20 Guardian evaluation episodes completed. These checks
 validate the configuration and tested card effects, not broad policy quality.
+
+## Card selection (interface v5)
+
+Armaments, True Grit+, Headbutt and Warcry now suspend card resolution for a
+mandatory choice; Armaments+ upgrades all eligible hand cards. Interface v5 is
+242 observations / 73 actions, including paginated discard choices. Source
+checks also corrected Anger timing and singleton True Grit RNG consumption.
+See [CARD_SELECTION.md](CARD_SELECTION.md) for exact behavior and limitations.
+
+100 Rust tests and 27 Python/Gym tests passed. New coverage includes every choice
+type, automatic choices, duplicate cards, paging, draw boundaries, invalid-action
+preservation, cleanup/reactions and resets. Thirty seeded selection-deck episodes
+are reproducible through Gymnasium. A 256-step PPO smoke run saved/reloaded with
+the selection deck and completed 20 Cultist evaluations without truncation.
+Original-game combat trace parity and policy improvement remain unestablished.
 
 ## Constructor and elite/boss corrections (interface v4)
 

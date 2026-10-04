@@ -26,6 +26,7 @@ jobs:
         run: >-
           .venv/bin/python train.py --timesteps 256 --n-envs 2 --n-steps 32
           --eval-freq 128 --eval-episodes 4 --enemies Sentry Sentry Sentry
-          --deck-preset act1_mid --save-path models/ci_smoke
+          --deck Armaments TrueGrit+ Headbutt Warcry+ Strike Defend BodySlam ShrugItOff
+          --save-path models/ci_smoke
       - name: Reload custom-deck policy
         run: .venv/bin/python evaluate.py --model models/ci_smoke/final --enemies Sentry Sentry Sentry --episodes 4

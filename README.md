@@ -75,7 +75,7 @@ python evaluate.py --episodes 100 --enemies Cultist
 ```
 
 `SlayEnv()` currently defaults to Cultist at ascension 7. The fixed interface has
-**196 observation values and 61 actions** (interface v4). Targeted cards can
+**242 observation values and 73 actions** (interface v5). Targeted cards can
 select any of five living enemy slots, each with its own powers and attack
 intent. Old checkpoints require retraining. See [RL_INTERFACE.md](docs/RL_INTERFACE.md)
 for offsets, target encoding, seeding, and capacity limits.
@@ -84,7 +84,8 @@ Custom decks and upgrades are supported: `SlayEnv(deck=["Strike", "Defend+", "Ba
 Training and evaluation accept `--deck-preset act1_early`, `act1_mid`, or
 `act1_late`, as well as `--deck-file` and explicit `--deck` lists. Checkpoints
 save their exact deck; model evaluation reloads it by default. See
-[DECKS.md](docs/DECKS.md) for examples, audited effects and unsupported card choices.
+[DECKS.md](docs/DECKS.md) for examples, audited effects and remaining limits. Armaments, True Grit+, Headbutt and
+Warcry support explicit [card choices](docs/CARD_SELECTION.md).
 
 The CLI and notebook share `spire_env.SpireEnv`. For notebooks, also install
 `uv pip install '.[notebook]'` into the same environment and select that kernel.
@@ -93,9 +94,9 @@ For a reproducible multi-enemy smoke run and held-out evaluation:
 ```bash
 python train.py --timesteps 2048 --n-envs 2 --n-steps 64 \
   --eval-freq 1024 --eval-episodes 20 --enemies LouseNormal LouseDefensive \
-  --save-path models/smoke_v4
+  --save-path models/smoke_v5
 python evaluate.py --episodes 100 --enemies LouseNormal LouseDefensive
-python evaluate.py --model models/smoke_v4/final --episodes 100 \
+python evaluate.py --model models/smoke_v5/final --episodes 100 \
   --enemies LouseNormal LouseDefensive
 ```
 

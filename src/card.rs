@@ -63,13 +63,6 @@ impl Card {
         };
         let id = ALL_CARDS.iter().copied().find(|id| format!("{id:?}") == name)
             .ok_or_else(|| format!("unknown card: {spec}; use a card name such as Strike or Bash+"))?;
-        if id == CardId::Armaments && upgraded {
-            return Err("Armaments+ upgrades the whole hand; that effect is not implemented yet".into());
-        }
-        if matches!(id, CardId::Armaments | CardId::Warcry | CardId::Headbutt)
-            || (id == CardId::TrueGrit && upgraded) {
-            return Err(format!("{spec} requires card selection, which the Python action interface does not support yet"));
-        }
         if upgraded && card_type(id) == CardType::Status {
             return Err(format!("status card {name} cannot be upgraded"));
         }
@@ -78,6 +71,14 @@ impl Card {
 
     pub fn spec(&self) -> String {
         format!("{:?}{}", self.id, if self.upgraded { "+" } else { "" })
+    }
+
+    pub fn can_upgrade(&self) -> bool {
+        !self.upgraded && card_type(self.id) != CardType::Status
+    }
+
+    pub fn upgrade(&mut self) {
+        if self.can_upgrade() { *self = Self::upgraded(self.id); }
     }
 }
 

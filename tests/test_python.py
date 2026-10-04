@@ -9,9 +9,9 @@ import rusted_spire
 
 class SlayEnvTests(unittest.TestCase):
     def test_versioned_interface_and_explicit_targeting(self):
-        self.assertEqual(rusted_spire.INTERFACE_VERSION, 4)
-        self.assertEqual(rusted_spire.ACTION_SIZE, 61)
-        self.assertEqual(rusted_spire.OBS_SIZE, 196)
+        self.assertEqual(rusted_spire.INTERFACE_VERSION, 5)
+        self.assertEqual(rusted_spire.ACTION_SIZE, 73)
+        self.assertEqual(rusted_spire.OBS_SIZE, 242)
         env = rusted_spire.SlayEnv(enemies=["JawWorm", "JawWorm"])
         before, mask = env.reset(42)
         action = next(i for i, legal in enumerate(mask)
@@ -55,7 +55,7 @@ class SlayEnvTests(unittest.TestCase):
     def test_reset_is_reproducible(self):
         env = rusted_spire.SlayEnv()
         initial = env.reset(42)
-        env.step(rusted_spire.ACTION_SIZE - 1)
+        env.step(rusted_spire.END_TURN_ACTION)
         self.assertEqual(env.reset(42), initial)
 
     def test_step_requires_reset(self):
@@ -72,14 +72,14 @@ class SlayEnvTests(unittest.TestCase):
         for action in invalid:
             with self.subTest(action=action), self.assertRaises(ValueError):
                 env.step(action)
-        end_turn = rusted_spire.ACTION_SIZE - 1
+        end_turn = rusted_spire.END_TURN_ACTION
         self.assertEqual(env.step(end_turn), reference.step(end_turn))
 
     def test_unaffordable_cards_are_rejected(self):
         env = rusted_spire.SlayEnv()
         _, mask = env.reset(42)
-        while any(mask[:-1]):
-            _, mask, _, done = env.step(next(i for i in range(len(mask) - 1) if mask[i]))
+        while any(mask[:rusted_spire.END_TURN_ACTION]):
+            _, mask, _, done = env.step(next(i for i in range(rusted_spire.END_TURN_ACTION) if mask[i]))
             self.assertFalse(done)
         # The starter hand has five cards and spending three energy cannot
         # consume all of them; slot zero is occupied but unaffordable now.
@@ -89,7 +89,7 @@ class SlayEnvTests(unittest.TestCase):
     def test_terminal_requires_reset(self):
         env = rusted_spire.SlayEnv(enemy="JawWorm")
         env.reset(42, hp=1)
-        _, mask, reward, done = env.step(rusted_spire.ACTION_SIZE - 1)
+        _, mask, reward, done = env.step(rusted_spire.END_TURN_ACTION)
         self.assertTrue(done)
         self.assertEqual(reward, -1.0)
         self.assertFalse(any(mask))

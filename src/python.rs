@@ -71,7 +71,7 @@ impl SlayEnv {
             pyo3::exceptions::PyRuntimeError::new_err("call reset() before step()")
         })?;
 
-        if state.phase != CombatPhase::PlayerTurn {
+        if matches!(state.phase, CombatPhase::Over(_)) {
             return Err(pyo3::exceptions::PyRuntimeError::new_err("combat is over; call reset() before step()"));
         }
         if !action_mask(state).get(action_idx).copied().unwrap_or(false) {
@@ -160,6 +160,13 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("TARGETS_PER_CARD", obs::TARGETS_PER_CARD)?;
     m.add("UNTARGETED_SLOT", obs::UNTARGETED_SLOT)?;
     m.add("END_TURN_ACTION", obs::END_TURN_ACTION)?;
+    m.add("SELECT_CARD_ACTION", obs::SELECT_CARD_ACTION)?;
+    m.add("PREVIOUS_PAGE_ACTION", obs::PREVIOUS_PAGE_ACTION)?;
+    m.add("NEXT_PAGE_ACTION", obs::NEXT_PAGE_ACTION)?;
+    m.add("SELECTION_OFFSET", obs::SELECTION_OFFSET)?;
+    m.add("CHOICE_OFFSET", obs::CHOICE_OFFSET)?;
+    m.add("CHOICE_FEATURES", obs::CHOICE_FEATURES)?;
+    m.add("SELECTION_PAGE_SIZE", crate::combat::SELECTION_PAGE_SIZE)?;
     m.add("PLAYER_FEATURES", obs::PLAYER_FEATURES)?;
     m.add("HAND_FEATURES", obs::HAND_FEATURES)?;
     m.add("ENEMY_OFFSET", obs::ENEMY_OFFSET)?;

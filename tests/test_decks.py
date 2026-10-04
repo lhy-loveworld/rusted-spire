@@ -43,14 +43,15 @@ class DeckTests(unittest.TestCase):
         obs, _ = env.reset(0)
         self.assertEqual(obs[9], 0)
 
-    def test_invalid_and_unimplemented_choices_fail_at_construction(self):
-        for cards in ([], ["strike"], ["Strike++"], ["Unknown"], ["Dazed+"],
-                      ["Armaments"], ["Armaments+"], ["TrueGrit+"], ["Warcry"], ["Headbutt"]):
+    def test_invalid_decks_fail_at_construction(self):
+        for cards in ([], ["strike"], ["Strike++"], ["Unknown"], ["Dazed+"]):
             with self.subTest(cards=cards), self.assertRaises(ValueError):
                 rs.SlayEnv(deck=cards)
         with self.assertRaises(TypeError):
             rs.SlayEnv(deck=[3])
         self.assertEqual(rs.SlayEnv(deck=["TrueGrit"]).deck, ["TrueGrit"])
+        cards = ["Armaments", "Armaments+", "TrueGrit+", "Warcry", "Warcry+", "Headbutt", "Headbutt+"]
+        self.assertEqual(rs.SlayEnv(deck=cards).deck, cards)
 
     def test_cli_deck_selection_and_json_validation(self):
         parser = argparse.ArgumentParser()

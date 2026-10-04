@@ -104,6 +104,11 @@ fn print_actions(actions: &[Action], state: &CombatState) {
 
 fn action_description(action: &Action, state: &CombatState) -> String {
     match action {
+        Action::SelectCard { option_idx } => {
+            let card = rusted_spire::combat::selection_card(state, *option_idx).unwrap();
+            format!("Choose {}", card.spec())
+        }
+        Action::SelectionPage { page } => format!("Choice page {}", page + 1),
         Action::EndTurn => "End Turn".to_string(),
         Action::PlayCard { hand_idx, target_idx } => {
             let card = &state.player.hand[*hand_idx];
