@@ -10,6 +10,7 @@ import numpy as np
 
 import rusted_spire
 from spire_env import SpireEnv
+from deck_config import STARTER, add_deck_arguments, resolve_deck, model_deck
 
 
 def evaluate(env, episodes=100, start_seed=100_000, policy_seed=1234, model=None, *, include_episodes=False):
@@ -63,6 +64,7 @@ def evaluate(env, episodes=100, start_seed=100_000, policy_seed=1234, model=None
     radius = z * math.sqrt(rate * (1 - rate) / episodes + z * z / (4 * episodes * episodes)) / denominator
     result = {
         "interface_version": rusted_spire.INTERFACE_VERSION,
+        "deck": env.deck,
         "episodes": episodes, "start_seed": start_seed, "policy_seed": policy_seed,
         "wins": wins, "win_rate": wins / episodes, "truncations": truncations,
         "win_rate_wilson95": [max(0.0, center - radius), min(1.0, center + radius)],
@@ -77,6 +79,7 @@ def evaluate(env, episodes=100, start_seed=100_000, policy_seed=1234, model=None
 
 def main():
     parser = argparse.ArgumentParser()
+    add_deck_arguments(parser, default_preset=None)
     parser.add_argument("--model", help="optional PPO checkpoint; omit for random baseline")
     parser.add_argument("--episodes", type=int, default=100)
     parser.add_argument("--start-seed", type=int, default=100_000)
@@ -84,7 +87,13 @@ def main():
     parser.add_argument("--enemies", nargs="+", default=["Cultist"])
     parser.add_argument("--ascension", type=int, default=7)
     args = parser.parse_args()
-    env = SpireEnv(enemies=args.enemies, ascension=args.ascension)
+    try:
+        deck = resolve_deck(args)
+        if deck is None:
+            deck = model_deck(args.model) if args.model else list(STARTER)
+    except (ValueError, OSError) as error:
+        parser.error(str(error))
+    env = SpireEnv(enemies=args.enemies, ascension=args.ascension, deck=deck)
     try:
         model = None
         if args.model:

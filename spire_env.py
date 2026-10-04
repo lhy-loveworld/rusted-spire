@@ -10,11 +10,11 @@ import rusted_spire
 class SpireEnv(gym.Env):
     metadata = {"render_modes": []}
 
-    def __init__(self, enemy="Cultist", *, enemies=None, ascension=7, max_steps=1000):
+    def __init__(self, enemy="Cultist", *, enemies=None, ascension=7, max_steps=1000, deck=None):
         super().__init__()
         if max_steps < 1:
             raise ValueError("max_steps must be positive")
-        self._env = rusted_spire.SlayEnv(enemy=enemy, enemies=enemies, ascension=ascension)
+        self._env = rusted_spire.SlayEnv(enemy=enemy, enemies=enemies, ascension=ascension, deck=deck)
         self._max_steps = max_steps
         self._steps = 0
         self._needs_reset = True
@@ -54,3 +54,7 @@ class SpireEnv(gym.Env):
 
     def action_masks(self):
         return self._action_mask.copy()
+
+    @property
+    def deck(self):
+        return self._env.deck

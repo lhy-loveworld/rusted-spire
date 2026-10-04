@@ -161,7 +161,8 @@ pub fn step(state: &mut CombatState, action: Action) -> Option<CombatResult> {
 // ---------------------------------------------------------------------------
 
 fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
-    let card = state.player.hand[hand_idx].clone();
+    // A card in use is outside every pile until its effects finish.
+    let card = state.player.hand.remove(hand_idx);
     state.player.energy -= card.cost;
     // onUseCard runs before queued card effects. Capture every living owner's
     // Sharp Hide now; its THORNS action survives even if this card kills it.
@@ -174,17 +175,16 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
         // --- basics ---
         CardId::Strike => {
             let base = if card.upgraded { 9 } else { 6 };
-            deal_to(state, hand_idx, target_idx, base, true);
+            deal_to(state, target_idx, base);
         }
         CardId::Defend => {
             let base = if card.upgraded { 8 } else { 5 };
             state.player.creature.add_block(base);
-            state.player.discard_from_hand(hand_idx);
         }
         CardId::Bash => {
             let base = if card.upgraded { 10 } else { 8 };
             let vuln = if card.upgraded { 3 } else { 2 };
-            deal_to(state, hand_idx, target_idx, base, true);
+            deal_to(state, target_idx, base);
             if !state.enemies[target_idx].is_dead() {
                 state.enemies[target_idx].creature.apply_power(PowerId::Vulnerable, vuln);
             }
@@ -193,8 +193,8 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
         // --- attacks ---
         CardId::TwinStrike => {
             let base = if card.upgraded { 7 } else { 5 };
-            deal_to(state, hand_idx, target_idx, base, false); // first hit (don't discard yet)
-            // second hit — re-clone in case card was not yet discarded
+            deal_to(state, target_idx, base); // first hit
+            // second hit
             if !state.enemies[target_idx].is_dead() {
                 let attacker_powers = state.player.creature.powers.clone();
                 let dmg = apply_powers(base, DamageType::Normal, &attacker_powers, &state.enemies[target_idx].creature.powers);
@@ -203,26 +203,23 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
                 state.enemies[target_idx].on_hp_lost(hp_lost);
                 process_death(state, target_idx);
             }
-            state.player.discard_from_hand(hand_idx);
         }
         CardId::IronWave => {
             let base = if card.upgraded { 7 } else { 5 };
             state.player.creature.add_block(base);
-            deal_to(state, hand_idx, target_idx, base, true);
+            deal_to(state, target_idx, base);
         }
         CardId::Cleave => {
             let base = if card.upgraded { 11 } else { 8 };
             deal_all(state, base);
-            state.player.discard_from_hand(hand_idx);
         }
         CardId::Clothesline => {
             let base = if card.upgraded { 14 } else { 12 };
             let weak = if card.upgraded { 3 } else { 2 };
-            deal_to(state, hand_idx, target_idx, base, false);
+            deal_to(state, target_idx, base);
             if !state.enemies[target_idx].is_dead() {
                 state.enemies[target_idx].creature.apply_power(PowerId::Weak, weak);
             }
-            state.player.discard_from_hand(hand_idx);
         }
         CardId::HeavyBlade => {
             // Strength bonus is ×3 (upgraded ×5) instead of ×1
@@ -236,11 +233,10 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
             state.enemies[target_idx].creature.trigger_on_attacked(hp_lost, DamageType::Normal);
             state.enemies[target_idx].on_hp_lost(hp_lost);
             process_death(state, target_idx);
-            state.player.discard_from_hand(hand_idx);
         }
         CardId::BodySlam => {
             let base = state.player.creature.block;
-            deal_to(state, hand_idx, target_idx, base, true);
+            deal_to(state, target_idx, base);
         }
         CardId::Thunderclap => {
             let base = if card.upgraded { 7 } else { 4 };
@@ -251,29 +247,26 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
                     state.enemies[i].creature.apply_power(PowerId::Vulnerable, 1);
                 }
             }
-            state.player.discard_from_hand(hand_idx);
         }
         CardId::PommelStrike => {
             let base = if card.upgraded { 10 } else { 9 };
             let draw = if card.upgraded { 2 } else { 1 };
-            deal_to(state, hand_idx, target_idx, base, true);
+            deal_to(state, target_idx, base);
             state.player.draw(draw, &mut state.rng.shuffle);
         }
         CardId::Anger => {
             let base = if card.upgraded { 8 } else { 6 };
             let copy = card.clone();
-            deal_to(state, hand_idx, target_idx, base, false);
+            deal_to(state, target_idx, base);
             state.player.discard_pile.push(copy);
-            state.player.discard_from_hand(hand_idx);
         }
         CardId::WildStrike => {
             let base = if card.upgraded { 17 } else { 12 };
-            deal_to(state, hand_idx, target_idx, base, false);
+            deal_to(state, target_idx, base);
             state.player.draw_pile.push(Card::new(CardId::Wound));
-            state.player.discard_from_hand(hand_idx);
         }
         CardId::SwordBoomerang => {
-            let base = if card.upgraded { 4 } else { 3 };
+            let base = 3;
             let hits = if card.upgraded { 4 } else { 3 };
             let attacker_powers = state.player.creature.powers.clone();
             for _ in 0..hits {
@@ -289,46 +282,35 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
                 state.enemies[t].on_hp_lost(hp_lost);
                 process_death(state, t);
             }
-            state.player.discard_from_hand(hand_idx);
         }
         CardId::Dropkick => {
             let base = if card.upgraded { 8 } else { 5 };
             let vulnerable = state.enemies[target_idx].creature.power_amount(PowerId::Vulnerable) > 0;
-            deal_to(state, hand_idx, target_idx, base, false);
+            deal_to(state, target_idx, base);
             if vulnerable {
                 state.player.energy += 1;
                 state.player.draw(1, &mut state.rng.shuffle);
             }
-            state.player.discard_from_hand(hand_idx);
         }
 
         // --- skills ---
         CardId::ShrugItOff => {
             let base = if card.upgraded { 11 } else { 8 };
             state.player.creature.add_block(base);
-            state.player.discard_from_hand(hand_idx);
             state.player.draw(1, &mut state.rng.shuffle);
         }
         CardId::TrueGrit => {
             let base = if card.upgraded { 9 } else { 7 };
             state.player.creature.add_block(base);
-            // Exhaust a random OTHER card in hand (before discarding TrueGrit)
-            let other: Vec<usize> = (0..state.player.hand.len())
-                .filter(|&i| i != hand_idx)
-                .collect();
-            state.player.discard_from_hand(hand_idx); // removes TrueGrit first
-            if !other.is_empty() {
-                let roll = state.rng.card.random_int((other.len() - 1) as i32) as usize;
-                let mut exhaust_idx = other[roll];
-                if exhaust_idx > hand_idx { exhaust_idx -= 1; } // adjust for removed card
-                state.player.exhaust_from_hand(exhaust_idx);
+            if !state.player.hand.is_empty() {
+                let index = state.rng.card.random_int((state.player.hand.len() - 1) as i32) as usize;
+                state.player.exhaust_from_hand(index);
             }
         }
         CardId::Flex => {
             let n = if card.upgraded { 4 } else { 2 };
             state.player.creature.apply_power(PowerId::Strength, n);
             state.player.creature.apply_power(PowerId::StrengthDown, n);
-            state.player.discard_from_hand(hand_idx);
         }
         CardId::Intimidate => {
             let weak = if card.upgraded { 2 } else { 1 };
@@ -338,17 +320,15 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
                     state.enemies[i].creature.apply_power(PowerId::Weak, weak);
                 }
             }
-            state.player.discard_from_hand(hand_idx);
         }
         CardId::Armaments => {
             let base = if card.upgraded { 5 } else { 5 };
             state.player.creature.add_block(base);
-            state.player.discard_from_hand(hand_idx);
+
             // Upgrade mechanic omitted for now
         }
         CardId::Warcry => {
-            state.player.discard_from_hand(hand_idx);
-            let draw_n = if card.upgraded { 3 } else { 2 };
+            let draw_n = if card.upgraded { 2 } else { 1 };
             let before = state.player.hand.len();
             state.player.draw(draw_n, &mut state.rng.shuffle);
             let drew = state.player.hand.len() - before;
@@ -360,7 +340,7 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
         }
         CardId::Headbutt => {
             let base = if card.upgraded { 12 } else { 9 };
-            deal_to(state, hand_idx, target_idx, base, true);
+            deal_to(state, target_idx, base);
             // Topdeck last card from discard
             if !state.player.discard_pile.is_empty() {
                 let last = state.player.discard_pile.len() - 1;
@@ -370,34 +350,27 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
         }
         CardId::Entrench => {
             let cur = state.player.creature.block;
-            state.player.creature.add_block(cur);
-            state.player.discard_from_hand(hand_idx);
+            state.player.creature.block = (cur * 2).min(999);
         }
 
         // --- powers ---
         CardId::Inflame => {
             let n = if card.upgraded { 3 } else { 2 };
             state.player.creature.apply_power(PowerId::Strength, n);
-            state.player.exhaust_from_hand(hand_idx);
         }
         CardId::Metallicize => {
             let n = if card.upgraded { 4 } else { 3 };
             state.player.creature.apply_power(PowerId::Metalicize, n);
-            state.player.exhaust_from_hand(hand_idx);
         }
         CardId::DemonForm => {
             let n = if card.upgraded { 3 } else { 2 };
             state.player.creature.apply_power(PowerId::DemonForm, n);
-            state.player.exhaust_from_hand(hand_idx);
         }
 
         // --- status ---
-        CardId::Slimed => {
-            state.player.exhaust_from_hand(hand_idx);
-        }
+        CardId::Slimed => {}
         CardId::Wound | CardId::Dazed => {
             // Unplayable — should never reach here
-            state.player.discard_from_hand(hand_idx);
         }
     }
 
@@ -413,6 +386,15 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
         state.player.creature.receive_damage(damage, DamageType::Thorns);
         if state.player.creature.is_dead() { break; }
     }
+    // UseCardAction: powers leave combat; exhaust cards enter exhaust; all
+    // other played cards reach discard only after their queued effects.
+    if card_type(card.id) != CardType::Power {
+        if matches!(card.id, CardId::Intimidate | CardId::Warcry | CardId::Slimed) {
+            state.player.exhaust_pile.push(card);
+        } else {
+            state.player.discard_pile.push(card);
+        }
+    }
     for enemy in &mut state.enemies {
         enemy.resolve_card_reactions();
     }
@@ -423,17 +405,13 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
 // ---------------------------------------------------------------------------
 
 /// Deal `base` damage to a single target, then process its death triggers.
-/// If `and_discard` is true, also discard the card at `hand_idx`.
-fn deal_to(state: &mut CombatState, hand_idx: usize, target_idx: usize, base: i32, and_discard: bool) {
+fn deal_to(state: &mut CombatState, target_idx: usize, base: i32) {
     let attacker_powers = state.player.creature.powers.clone();
     let dmg = apply_powers(base, DamageType::Normal, &attacker_powers, &state.enemies[target_idx].creature.powers);
     let hp_lost = state.enemies[target_idx].creature.receive_damage(dmg, DamageType::Normal);
     state.enemies[target_idx].creature.trigger_on_attacked(hp_lost, DamageType::Normal);
     state.enemies[target_idx].on_hp_lost(hp_lost);
     process_death(state, target_idx);
-    if and_discard {
-        state.player.discard_from_hand(hand_idx);
-    }
 }
 
 /// Deal `base` damage to ALL living enemies (AoE).

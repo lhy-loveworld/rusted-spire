@@ -17,13 +17,14 @@ pub struct SlayEnv {
     state: Option<CombatState>,
     enemy_ids: Vec<EnemyId>,
     ascension: u8,
+    deck: Vec<Card>,
 }
 
 #[pymethods]
 impl SlayEnv {
     #[new]
-    #[pyo3(signature = (enemy=None, enemies=None, ascension=7))]
-    pub fn new(enemy: Option<&str>, enemies: Option<Vec<String>>, ascension: u8) -> PyResult<Self> {
+    #[pyo3(signature = (enemy=None, enemies=None, ascension=7, *, deck=None))]
+    pub fn new(enemy: Option<&str>, enemies: Option<Vec<String>>, ascension: u8, deck: Option<Vec<String>>) -> PyResult<Self> {
         let enemy_ids = if let Some(list) = enemies {
             list.iter().map(|s| parse_enemy_id(s)).collect::<PyResult<_>>()?
         } else if let Some(e) = enemy {
@@ -36,14 +37,28 @@ impl SlayEnv {
                 format!("expected between 1 and {MAX_ENEMIES} enemies")
             ));
         }
-        Ok(SlayEnv { state: None, enemy_ids, ascension })
+        let deck = match deck {
+            None => ironclad_starter(),
+            Some(cards) => {
+                if cards.is_empty() {
+                    return Err(pyo3::exceptions::PyValueError::new_err("deck must contain at least one card"));
+                }
+                cards.iter().map(|s| Card::from_spec(s).map_err(pyo3::exceptions::PyValueError::new_err))
+                    .collect::<PyResult<Vec<_>>>()?
+            }
+        };
+        Ok(SlayEnv { state: None, enemy_ids, ascension, deck })
     }
+
+    /// Returns a copy of the starting deck, preserving order and duplicates.
+    #[getter]
+    pub fn deck(&self) -> Vec<String> { self.deck.iter().map(Card::spec).collect() }
 
     /// Reset the environment with the given seed and optional starting HP.
     #[pyo3(signature = (seed, hp=None))]
     pub fn reset(&mut self, seed: u64, hp: Option<i32>) -> (Vec<f32>, Vec<bool>) {
         let starting_hp = hp.unwrap_or(CombatState::MAX_HP).clamp(1, CombatState::MAX_HP);
-        let state = CombatState::new(ironclad_starter(), &self.enemy_ids, seed, self.ascension, starting_hp);
+        let state = CombatState::new(self.deck.clone(), &self.enemy_ids, seed, self.ascension, starting_hp);
         let obs  = encode_obs(&state);
         let mask = action_mask(&state);
         self.state = Some(state);
@@ -150,5 +165,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("ENEMY_OFFSET", obs::ENEMY_OFFSET)?;
     m.add("ENEMY_FEATURES", obs::ENEMY_FEATURES)?;
     m.add("CARD_COUNT", crate::card::CARD_COUNT)?;
+    m.add("CARD_NAMES", crate::card::ALL_CARDS.iter().map(|id| format!("{id:?}")).collect::<Vec<_>>())?;
     Ok(())
 }

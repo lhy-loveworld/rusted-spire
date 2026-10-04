@@ -15,10 +15,12 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 
 import rusted_spire
 from spire_env import SpireEnv
+from deck_config import add_deck_arguments, resolve_deck
 
 
 def main():
     parser = argparse.ArgumentParser()
+    add_deck_arguments(parser)
     parser.add_argument("--timesteps", type=float, default=1_000_000)
     parser.add_argument("--n-envs", type=int, default=8)
     parser.add_argument("--save-path", default=f"models/ppo_spire_v{rusted_spire.INTERFACE_VERSION}")
@@ -29,6 +31,10 @@ def main():
     parser.add_argument("--eval-freq", type=int, default=20_000, help="environment timesteps between evaluations")
     parser.add_argument("--eval-episodes", type=int, default=100)
     args = parser.parse_args()
+    try:
+        deck = resolve_deck(args)
+    except (ValueError, OSError) as error:
+        parser.error(str(error))
     if min(args.n_envs, args.n_steps, args.timesteps, args.eval_freq, args.eval_episodes) <= 0:
         parser.error("training sizes and evaluation intervals must be positive")
     rollout_size = args.n_envs * args.n_steps
@@ -44,12 +50,13 @@ def main():
         "obs_size": rusted_spire.OBS_SIZE,
         "action_size": rusted_spire.ACTION_SIZE,
         "training": vars(args),
+        "deck": deck,
         "revision": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
         "tracked_changes": bool(subprocess.check_output(["git", "diff", "HEAD", "--name-only"], text=True).strip()),
         "packages": {name: version(name) for name in ("torch", "stable-baselines3", "sb3-contrib", "gymnasium", "numpy")},
     }
-    (save_path / "interface.json").write_text(json.dumps(metadata, indent=2) + "\n")
-    kwargs = {"enemies": args.enemies, "ascension": args.ascension}
+    (save_path / "interface.json").write_text(json.dumps(metadata, indent=2, default=str) + "\n")
+    kwargs = {"enemies": args.enemies, "ascension": args.ascension, "deck": deck}
     vec_env = make_vec_env(SpireEnv, n_envs=args.n_envs, seed=args.seed,
                           env_kwargs=kwargs, vec_env_cls=SubprocVecEnv)
     eval_env = None

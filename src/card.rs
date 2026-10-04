@@ -54,7 +54,42 @@ impl Card {
     pub fn upgraded(id: CardId) -> Self {
         Card { id, upgraded: true, cost: upgraded_cost(id) }
     }
+
+    /// Stable public deck format: enum name, optionally followed by one '+'.
+    pub fn from_spec(spec: &str) -> Result<Self, String> {
+        let (name, upgraded) = match spec.strip_suffix('+') {
+            Some(name) => (name, true),
+            None => (spec, false),
+        };
+        let id = ALL_CARDS.iter().copied().find(|id| format!("{id:?}") == name)
+            .ok_or_else(|| format!("unknown card: {spec}; use a card name such as Strike or Bash+"))?;
+        if id == CardId::Armaments && upgraded {
+            return Err("Armaments+ upgrades the whole hand; that effect is not implemented yet".into());
+        }
+        if matches!(id, CardId::Armaments | CardId::Warcry | CardId::Headbutt)
+            || (id == CardId::TrueGrit && upgraded) {
+            return Err(format!("{spec} requires card selection, which the Python action interface does not support yet"));
+        }
+        if upgraded && card_type(id) == CardType::Status {
+            return Err(format!("status card {name} cannot be upgraded"));
+        }
+        Ok(if upgraded { Self::upgraded(id) } else { Self::new(id) })
+    }
+
+    pub fn spec(&self) -> String {
+        format!("{:?}{}", self.id, if self.upgraded { "+" } else { "" })
+    }
 }
+
+pub const ALL_CARDS: [CardId; 29] = [
+    CardId::Strike, CardId::Defend, CardId::Bash, CardId::TwinStrike,
+    CardId::IronWave, CardId::Cleave, CardId::Clothesline, CardId::HeavyBlade,
+    CardId::BodySlam, CardId::Thunderclap, CardId::PommelStrike, CardId::Anger,
+    CardId::WildStrike, CardId::SwordBoomerang, CardId::Dropkick, CardId::ShrugItOff,
+    CardId::TrueGrit, CardId::Flex, CardId::Intimidate, CardId::Armaments,
+    CardId::Warcry, CardId::Headbutt, CardId::Entrench, CardId::Inflame,
+    CardId::Metallicize, CardId::DemonForm, CardId::Slimed, CardId::Wound, CardId::Dazed,
+];
 
 pub fn base_cost(id: CardId) -> i32 {
     match id {
@@ -93,6 +128,7 @@ pub fn base_cost(id: CardId) -> i32 {
 fn upgraded_cost(id: CardId) -> i32 {
     match id {
         CardId::BodySlam => 0,
+        CardId::Entrench => 1,
         other            => base_cost(other),
     }
 }
@@ -105,10 +141,10 @@ pub fn card_type(id: CardId) -> CardType {
         CardId::Strike | CardId::Bash | CardId::TwinStrike | CardId::IronWave |
         CardId::Cleave | CardId::Clothesline | CardId::HeavyBlade | CardId::BodySlam |
         CardId::Thunderclap | CardId::PommelStrike | CardId::Anger | CardId::WildStrike |
-        CardId::SwordBoomerang | CardId::Dropkick => CardType::Attack,
+        CardId::SwordBoomerang | CardId::Dropkick | CardId::Headbutt => CardType::Attack,
 
         CardId::Defend | CardId::ShrugItOff | CardId::TrueGrit | CardId::Flex |
-        CardId::Intimidate | CardId::Armaments | CardId::Warcry | CardId::Headbutt |
+        CardId::Intimidate | CardId::Armaments | CardId::Warcry |
         CardId::Entrench => CardType::Skill,
 
         CardId::Inflame | CardId::Metallicize | CardId::DemonForm => CardType::Power,

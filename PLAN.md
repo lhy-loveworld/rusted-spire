@@ -30,6 +30,12 @@ not assume more steps at the same settings will solve the encounters. See
 docs/TRAINING_V4.md. Full Java combat parity has not been established. See
 README.md and docs/VALIDATION.md for setup, evidence, and interface limits.
 
+Configurable decks/upgrades now reach Python, Gymnasium, training and evaluation;
+early/mid/late Act 1 snapshots and a preset-card source audit are in docs/DECKS.md.
+Card-in-use cleanup, draw boundaries, power removal and several upgrade effects
+are corrected. Next simulator priority: explicit card-selection actions, remaining
+card/enemy audits and controlled original-game combat traces before full-run expansion.
+
 ---
 
 ## Status Legend

@@ -20,10 +20,12 @@ from sb3_contrib import MaskablePPO
 
 from evaluate import evaluate
 from spire_env import SpireEnv
+from deck_config import add_deck_arguments, resolve_deck
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    add_deck_arguments(parser)
     parser.add_argument("--encounters", nargs="+", default=["Lagavulin", "TheGuardian"])
     parser.add_argument("--train-seeds", nargs="+", type=int, default=[11, 22, 33])
     parser.add_argument("--timesteps", type=int, default=65536)
@@ -32,6 +34,10 @@ def main():
     parser.add_argument("--ascension", type=int, default=0)
     parser.add_argument("--output", type=Path, default=ROOT / "models/benchmark_v4")
     args = parser.parse_args()
+    try:
+        deck = resolve_deck(args)
+    except (ValueError, OSError) as error:
+        parser.error(str(error))
     args.output = args.output.resolve()
     if args.output.exists():
         parser.error("output already exists; choose a new directory to preserve prior runs")
@@ -43,7 +49,8 @@ def main():
     torch.set_num_threads(1)
     report = {
         "revision": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
-        "protocol": dict(vars(args), output=str(args.output)),
+        "protocol": dict(vars(args), output=str(args.output), deck_file=str(args.deck_file) if args.deck_file else None),
+        "deck": deck,
         "checkpoint_selection": "final, never selected using held-out results",
         "results": [],
     }
@@ -55,7 +62,7 @@ def main():
         print(json.dumps({k: v for k, v in entry.items() if k != "episode_results"}), flush=True)
 
     for encounter in args.encounters:
-        env = SpireEnv(enemy=encounter, ascension=args.ascension)
+        env = SpireEnv(enemy=encounter, ascension=args.ascension, deck=deck)
         try:
             for seed in args.train_seeds:
                 baseline = evaluate(env, args.episodes, args.start_seed, seed, include_episodes=True)
@@ -66,7 +73,7 @@ def main():
                     "--enemies", encounter, "--ascension", str(args.ascension),
                     "--n-envs", "2", "--n-steps", "128",
                     "--eval-freq", str(args.timesteps), "--eval-episodes", "20",
-                    "--save-path", str(run_dir)]
+                    "--save-path", str(run_dir), "--deck", *deck]
                 print(f"Training {encounter}, seed {seed}, {args.timesteps} steps", flush=True)
                 with (args.output / f"{encounter}_{seed}.log").open("w") as log:
                     subprocess.run(command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, check=True)

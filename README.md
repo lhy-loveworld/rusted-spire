@@ -80,6 +80,12 @@ select any of five living enemy slots, each with its own powers and attack
 intent. Old checkpoints require retraining. See [RL_INTERFACE.md](docs/RL_INTERFACE.md)
 for offsets, target encoding, seeding, and capacity limits.
 
+Custom decks and upgrades are supported: `SlayEnv(deck=["Strike", "Defend+", "Bash+"])`.
+Training and evaluation accept `--deck-preset act1_early`, `act1_mid`, or
+`act1_late`, as well as `--deck-file` and explicit `--deck` lists. Checkpoints
+save their exact deck; model evaluation reloads it by default. See
+[DECKS.md](docs/DECKS.md) for examples, audited effects and unsupported card choices.
+
 The CLI and notebook share `spire_env.SpireEnv`. For notebooks, also install
 `uv pip install '.[notebook]'` into the same environment and select that kernel.
 For a reproducible multi-enemy smoke run and held-out evaluation:

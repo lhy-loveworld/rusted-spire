@@ -103,6 +103,20 @@ is required to run the committed fixture tests.
   the primitive/shuffle fixture agreement does not establish whole-combat parity.
 - Existing trained policies need reevaluation after combat correctness changes.
 
+## Configurable decks and preset-card audit
+
+Python, Gymnasium, training, evaluation and the benchmark runner now accept
+explicit decks and upgraded cards. Early/mid/late Act 1 presets use card effects
+checked against their Java classes. Card-in-use cleanup fixes self-reshuffling
+draw cards, powers entering exhaust, and Intimidate failing to exhaust. Entrench
+upgrade cost/block doubling and Sword Boomerang's upgrade damage were corrected.
+Selection-dependent cards are rejected by deck configuration until the action
+interface supports them. See [DECKS.md](DECKS.md) for scope and remaining gaps.
+
+89 Rust tests and 23 Python/Gym tests passed. A custom-deck training/checkpoint
+reload smoke run and 20 Guardian evaluation episodes completed. These checks
+validate the configuration and tested card effects, not broad policy quality.
+
 ## Constructor and elite/boss corrections (interface v4)
 
 Constructor HP/damage rolls now precede formation-wide pre-battle rolls,

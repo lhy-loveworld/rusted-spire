@@ -8,6 +8,13 @@ Training writes the version, dimensions, and command arguments to
 `interface.json` beside the checkpoint. Evaluation passes the environment to
 SB3 on load so incompatible observation/action dimensions are rejected.
 
+Both `SlayEnv` and `SpireEnv` accept `deck=["Strike", "Bash+", ...]` at
+construction. Each reset clones the configured starting deck. Training stores
+the resolved list in `interface.json`; evaluation reloads it unless explicitly
+overridden. See [DECKS.md](DECKS.md) for presets and selection limitations.
+Dimensions stay at v4; card cleanup corrections change behavior, so existing
+policies still need reevaluation.
+
 ## Actions
 
 For hand slot `h` (0–9), action `6*h+t` chooses target slot `t` (0–4).
