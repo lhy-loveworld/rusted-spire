@@ -14,9 +14,11 @@ Completed in the resumption: WSL/Python setup, regression tests, enemy block
 lifetime, defeat handling, illegal-action rejection, attack intent refresh,
 turn/round power timing, explicit multi-enemy targeting and observations (v3),
 Gymnasium seeding/truncation, Sentry Artifact/Dazed, and half-HP slime splits.
+The local Java audit also guided slime AI probabilities/repetition, direct
+move changes, Demon Form's post-draw timing, and round-end hook ordering.
 Training and seeded evaluation scripts are available, with CI coverage.
 Next priorities are original-game trace comparison,
-enemy/card fidelity (slime AI, Lagavulin, Guardian), and meaningful
+enemy/card fidelity (Lagavulin, Guardian, card choices), and meaningful
 held-out training experiments. Java parity has not been established. See
 README.md and docs/VALIDATION.md for setup, evidence, and interface limits.
 

@@ -94,8 +94,8 @@ python evaluate.py --model models/smoke_v3/final --episodes 100 \
 ```
 
 GitHub Actions runs Rust/Python tests and a short masked PPO smoke test. Sentry
-Artifact/Dazed and half-HP slime splitting have regression coverage. Slime move
-selection, other enemy/card effects, and exact Java RNG matching still need
+Artifact/Dazed, half-HP slime splitting, and Java-guided slime move selection
+have regression coverage. Other enemy/card effects and exact Java RNG matching still need
 fidelity checks before training results can be interpreted as game skill. See
 [VALIDATION.md](docs/VALIDATION.md) for tested behavior and remaining limitations.
 

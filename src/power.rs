@@ -19,6 +19,7 @@ pub trait Power: std::fmt::Debug {
     // --- turn hooks ---
     // Returns an optional (PowerId, amount) to apply to the owner after ticking.
     fn at_start_of_turn(&mut self) -> Option<(PowerId, i32)> { None }
+    fn at_start_of_turn_post_draw(&mut self) -> Option<(PowerId, i32)> { None }
     fn at_end_of_turn(&mut self, _is_player: bool) -> Option<(PowerId, i32)> { None }
     fn at_end_of_round(&mut self) -> Option<(PowerId, i32)> { None }
 
@@ -206,8 +207,12 @@ impl PowerState {
     }
 
     pub fn at_start_of_turn(&mut self) -> Option<(PowerId, i32)> {
+        None
+    }
+
+    pub fn at_start_of_turn_post_draw(&mut self) -> Option<(PowerId, i32)> {
         match self {
-            PowerState::DemonForm(p)   => p.at_start_of_turn(),
+            PowerState::DemonForm(p)   => p.at_start_of_turn_post_draw(),
             _                          => None,
         }
     }
@@ -390,7 +395,7 @@ impl Power for MetalicizePower {
     fn reduce(&mut self, n: i32) { self.stacks -= n; }
 }
 
-// --- DemonForm: gain N Strength at start of each player turn ---
+// --- DemonForm: gain N Strength after the normal player turn draw ---
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DemonFormPower { pub stacks: i32 }
@@ -401,7 +406,7 @@ impl Power for DemonFormPower {
     fn stack(&mut self, n: i32) { self.stacks += n; }
     fn reduce(&mut self, n: i32) { self.stacks -= n; }
 
-    fn at_start_of_turn(&mut self) -> Option<(PowerId, i32)> {
+    fn at_start_of_turn_post_draw(&mut self) -> Option<(PowerId, i32)> {
         Some((PowerId::Strength, self.stacks))
     }
 }

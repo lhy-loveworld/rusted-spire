@@ -97,13 +97,23 @@ impl CreatureState {
     }
 
     /// Called at the start of this creature's turn (player or enemy).
-    /// Applies start-of-turn effects such as Demon Form.
+    /// Applies effects before the normal draw.
     pub fn trigger_start_of_turn(&mut self) {
         let pending: Vec<(PowerId, i32)> = self.powers.iter_mut()
             .filter_map(|p| p.at_start_of_turn())
             .collect();
         for (id, amt) in pending {
             self.apply_power(id, amt);
+        }
+    }
+
+    /// Player effects that resolve after the normal turn draw, such as Demon Form.
+    pub fn trigger_start_of_turn_post_draw(&mut self) {
+        let pending: Vec<_> = self.powers.iter_mut()
+            .filter_map(|p| p.at_start_of_turn_post_draw())
+            .collect();
+        for (id, amount) in pending {
+            self.apply_power(id, amount);
         }
     }
 

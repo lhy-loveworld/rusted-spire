@@ -473,6 +473,12 @@ fn end_player_turn(state: &mut CombatState) {
         state.enemies[i].creature.trigger_start_of_turn();
         if state.enemies[i].is_splitting() {
             let children = state.enemies[i].split_children(&mut state.rng.ai);
+            // SpikeSlime_L.takeTurn queues RollMoveAction even after splitting.
+            // Its now-discarded parent has Split history, so no fallback coin
+            // is needed. AcidSlime_L and SlimeBoss omit this parent roll.
+            if state.enemies[i].id == EnemyId::SpikeSlimeLarge {
+                state.rng.ai.random_int(99);
+            }
             state.enemies[i].creature.hp = 0;
             state.enemies[i].death_processed = true;
             let count = children.len();
@@ -492,14 +498,19 @@ fn end_player_turn(state: &mut CombatState) {
         i += 1;
     }
 
-    // End-of-round powers run only after every enemy has acted.
+    // MonsterGroup.applyEndOfTurnPowers: all monster end-turn hooks, then
+    // player round-end hooks, then all monster round-end hooks.
     for enemy in &mut state.enemies {
         if !enemy.is_dead() {
             enemy.creature.tick_powers_end_of_turn(false);
-            enemy.creature.tick_powers_end_of_round();
         }
     }
     state.player.creature.tick_powers_end_of_round();
+    for enemy in &mut state.enemies {
+        if !enemy.is_dead() {
+            enemy.creature.tick_powers_end_of_round();
+        }
+    }
 
     state.turn += 1;
     state.player.start_turn(&mut state.rng.shuffle);

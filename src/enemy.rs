@@ -141,7 +141,7 @@ impl EnemyState {
 
     pub fn roll_move(&mut self, ai_rng: &mut Rng, first_move: bool) {
         let roll = ai_rng.random_int(99);
-        let (mv, intent) = get_move(self.id, roll, &self.move_history, first_move, &self.creature, self.var_damage, self.ascension);
+        let (mv, intent) = get_move(self.id, roll, &self.move_history, first_move, &self.creature, self.var_damage, self.ascension, ai_rng);
         self.next_move = mv;
         self.intent = intent;
     }
@@ -151,7 +151,20 @@ impl EnemyState {
         self.move_history.push(self.next_move);
         if self.move_history.len() > 5 { self.move_history.remove(0); }
         if !self.is_dead() {
-            self.roll_move(ai_rng, false);
+            match self.id {
+                // These Java takeTurn methods set the next move directly.
+                EnemyId::AcidSlimeSmall => {
+                    (self.next_move, self.intent) = if self.next_move == ACID_S_TACKLE {
+                        (ACID_S_LICK, Intent::Debuff)
+                    } else {
+                        (ACID_S_TACKLE, Intent::Attack(if self.ascension >= 2 { 4 } else { 3 }))
+                    };
+                }
+                EnemyId::SlimeBoss => {
+                    (self.next_move, self.intent) = slime_boss_get_move(&self.move_history, false, self.ascension);
+                }
+                _ => self.roll_move(ai_rng, false),
+            }
         }
     }
 
@@ -323,17 +336,17 @@ const GUARDIAN_WHIRLWIND:  u8 = 3;
 // ---------------------------------------------------------------------------
 
 fn get_move(id: EnemyId, roll: i32, history: &[u8], first_move: bool,
-            creature: &CreatureState, var_damage: i32, asc: u8) -> (u8, Intent) {
+            creature: &CreatureState, var_damage: i32, asc: u8, ai_rng: &mut Rng) -> (u8, Intent) {
     match id {
         EnemyId::JawWorm        => jaw_worm_get_move(roll, history, first_move),
         EnemyId::Cultist        => cultist_get_move(first_move),
         EnemyId::LouseNormal    => louse_get_move(roll, history, var_damage, false),
         EnemyId::LouseDefensive => louse_get_move(roll, history, var_damage, true),
         EnemyId::FungiBeast     => fungi_get_move(roll, history),
-        EnemyId::AcidSlimeSmall => acid_small_get_move(roll, history),
-        EnemyId::AcidSlimeMedium=> acid_medium_get_move(roll, history),
+        EnemyId::AcidSlimeSmall => acid_small_get_move(history, asc, ai_rng),
+        EnemyId::AcidSlimeMedium=> acid_get_move(roll, history, asc, false, ai_rng),
         EnemyId::SpikeSlimeSmall=> spike_small_get_move(roll, history),
-        EnemyId::SpikeSlimeMedium=>spike_medium_get_move(roll, history),
+        EnemyId::SpikeSlimeMedium=>spike_get_move(roll, history, asc, false),
         EnemyId::MadGremlin     => (MAD_SCRATCH,     Intent::Attack(4 + if asc >= 2 { 1 } else { 0 })),
         EnemyId::SneakyGremlin  => (SNEAKY_PUNCTURE, Intent::Attack(9 + if asc >= 2 { 1 } else { 0 })),
         EnemyId::FatGremlin     => (FAT_SMASH,       Intent::AttackDebuff(5 + if asc >= 2 { 1 } else { 0 })),
@@ -343,8 +356,8 @@ fn get_move(id: EnemyId, roll: i32, history: &[u8], first_move: bool,
         EnemyId::Lagavulin      => lagavulin_get_move(history, first_move, creature, asc),
         EnemyId::Sentry         => sentry_get_move(history, asc),
         EnemyId::SlimeBoss      => slime_boss_get_move(history, first_move, asc),
-        EnemyId::AcidSlimeLarge => acid_large_get_move(roll, history),
-        EnemyId::SpikeSlimeLarge=> spike_large_get_move(roll, history),
+        EnemyId::AcidSlimeLarge => acid_get_move(roll, history, asc, true, ai_rng),
+        EnemyId::SpikeSlimeLarge=> spike_get_move(roll, history, asc, true),
         EnemyId::TheGuardian    => guardian_get_move(history, first_move, creature, asc),
     }
 }
@@ -503,14 +516,17 @@ fn fungi_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
 // Acid Slime (Small)
 // ---------------------------------------------------------------------------
 
-fn acid_small_get_move(roll: i32, history: &[u8]) -> (u8, Intent) {
-    let last_two = |mv| history.len() >= 2 && history[history.len()-1] == mv && history[history.len()-2] == mv;
-    if roll < 50 {
-        if last_two(ACID_S_LICK) { return (ACID_S_TACKLE, Intent::Attack(3)); }
-        return (ACID_S_LICK, Intent::Debuff);
+fn acid_small_get_move(history: &[u8], asc: u8, ai_rng: &mut Rng) -> (u8, Intent) {
+    let tackle = if asc >= 17 {
+        history.ends_with(&[ACID_S_TACKLE, ACID_S_TACKLE])
+    } else {
+        ai_rng.random_bool()
+    };
+    if tackle {
+        (ACID_S_TACKLE, Intent::Attack(if asc >= 2 { 4 } else { 3 }))
+    } else {
+        (ACID_S_LICK, Intent::Debuff)
     }
-    if last_two(ACID_S_TACKLE) { return (ACID_S_LICK, Intent::Debuff); }
-    (ACID_S_TACKLE, Intent::Attack(3))
 }
 
 fn acid_small_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
@@ -530,18 +546,36 @@ fn acid_small_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
 // Acid Slime (Medium)
 // ---------------------------------------------------------------------------
 
-fn acid_medium_get_move(roll: i32, history: &[u8]) -> (u8, Intent) {
-    let last_two = |mv| history.len() >= 2 && history[history.len()-1] == mv && history[history.len()-2] == mv;
-    if roll < 40 {
-        if last_two(ACID_M_SPIT) { return (ACID_M_LICK, Intent::Debuff); }
-        return (ACID_M_SPIT, Intent::AttackDebuff(7));
+/// AcidSlime_M/L.getMove: branch thresholds and fallback coin flips differ at A17.
+fn acid_get_move(roll: i32, history: &[u8], asc: u8, large: bool, ai_rng: &mut Rng) -> (u8, Intent) {
+    let hard = asc >= 17;
+    let last = |mv| history.last() == Some(&mv);
+    let twice = |mv| history.ends_with(&[mv, mv]);
+    let spit_threshold = if hard { 40 } else { 30 };
+    let tackle_threshold = if hard && !large { 80 } else { 70 };
+    let mv = if roll < spit_threshold {
+        if twice(ACID_M_SPIT) {
+            let tackle = if hard && large { ai_rng.random_bool_chance(0.6) }
+                         else { ai_rng.random_bool() };
+            if tackle { ACID_M_TACKLE } else { ACID_M_LICK }
+        } else { ACID_M_SPIT }
+    } else if roll < tackle_threshold {
+        if if hard { twice(ACID_M_TACKLE) } else { last(ACID_M_TACKLE) } {
+            let chance = if !hard { 0.4 } else if large { 0.6 } else { 0.5 };
+            if ai_rng.random_bool_chance(chance) { ACID_M_SPIT } else { ACID_M_LICK }
+        } else { ACID_M_TACKLE }
+    } else if if hard { last(ACID_M_LICK) } else { twice(ACID_M_LICK) } {
+        if ai_rng.random_bool_chance(0.4) { ACID_M_SPIT } else { ACID_M_TACKLE }
+    } else { ACID_M_LICK };
+    let (spit, tackle) = match (large, asc >= 2) {
+        (false, false) => (7, 10), (false, true) => (8, 12),
+        (true, false) => (11, 16), (true, true) => (12, 18),
+    };
+    match mv {
+        ACID_M_SPIT => (mv, Intent::AttackDebuff(spit)),
+        ACID_M_TACKLE => (mv, Intent::Attack(tackle)),
+        _ => (mv, Intent::Debuff),
     }
-    if roll < 70 {
-        if last_two(ACID_M_LICK) { return (ACID_M_TACKLE, Intent::Attack(10)); }
-        return (ACID_M_LICK, Intent::Debuff);
-    }
-    if last_two(ACID_M_TACKLE) { return (ACID_M_SPIT, Intent::AttackDebuff(7)); }
-    (ACID_M_TACKLE, Intent::Attack(10))
 }
 
 fn acid_medium_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
@@ -585,14 +619,24 @@ fn spike_small_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
 // Spike Slime (Medium)
 // ---------------------------------------------------------------------------
 
-fn spike_medium_get_move(roll: i32, history: &[u8]) -> (u8, Intent) {
-    let last_two = |mv| history.len() >= 2 && history[history.len()-1] == mv && history[history.len()-2] == mv;
-    if roll < 30 {
-        if last_two(SPIKE_M_LICK) { return (SPIKE_M_TACKLE, Intent::AttackDebuff(8)); }
-        return (SPIKE_M_LICK, Intent::Debuff);
+/// SpikeSlime_M/L.getMove: 30% Tackle, 70% Lick before repeat restrictions.
+fn spike_get_move(roll: i32, history: &[u8], asc: u8, large: bool) -> (u8, Intent) {
+    let tackle = if roll < 30 {
+        !history.ends_with(&[SPIKE_M_TACKLE, SPIKE_M_TACKLE])
+    } else if asc >= 17 {
+        history.last() == Some(&SPIKE_M_LICK)
+    } else {
+        history.ends_with(&[SPIKE_M_LICK, SPIKE_M_LICK])
+    };
+    if tackle {
+        let damage = match (large, asc >= 2) {
+            (false, false) => 8, (false, true) => 10,
+            (true, false) => 16, (true, true) => 18,
+        };
+        (SPIKE_M_TACKLE, Intent::AttackDebuff(damage))
+    } else {
+        (SPIKE_M_LICK, Intent::Debuff)
     }
-    if last_two(SPIKE_M_TACKLE) { return (SPIKE_M_LICK, Intent::Debuff); }
-    (SPIKE_M_TACKLE, Intent::AttackDebuff(8))
 }
 
 fn spike_medium_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
@@ -783,19 +827,7 @@ fn slime_boss_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
 // Acid Slime Large / Spike Slime Large (from boss split)
 // ---------------------------------------------------------------------------
 
-fn acid_large_get_move(roll: i32, history: &[u8]) -> (u8, Intent) {
-    let last_two = |mv| history.len() >= 2 && history[history.len()-1] == mv && history[history.len()-2] == mv;
-    if roll < 40 {
-        if last_two(ACID_M_SPIT) { return (ACID_M_LICK, Intent::Debuff); }
-        return (ACID_M_SPIT, Intent::AttackDebuff(11));
-    }
-    if roll < 70 {
-        if last_two(ACID_M_LICK) { return (ACID_M_TACKLE, Intent::Attack(16)); }
-        return (ACID_M_LICK, Intent::Debuff);
-    }
-    if last_two(ACID_M_TACKLE) { return (ACID_M_SPIT, Intent::AttackDebuff(11)); }
-    (ACID_M_TACKLE, Intent::Attack(16))
-}
+
 
 fn acid_large_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
     match enemy.next_move {
@@ -812,15 +844,7 @@ fn acid_large_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
     }
 }
 
-fn spike_large_get_move(roll: i32, history: &[u8]) -> (u8, Intent) {
-    let last_two = |mv| history.len() >= 2 && history[history.len()-1] == mv && history[history.len()-2] == mv;
-    if roll < 30 {
-        if last_two(SPIKE_M_LICK) { return (SPIKE_M_TACKLE, Intent::AttackDebuff(16)); }
-        return (SPIKE_M_LICK, Intent::Debuff);
-    }
-    if last_two(SPIKE_M_TACKLE) { return (SPIKE_M_LICK, Intent::Debuff); }
-    (SPIKE_M_TACKLE, Intent::AttackDebuff(16))
-}
+
 
 fn spike_large_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
     match enemy.next_move {
@@ -870,5 +894,168 @@ fn guardian_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
             }
         }
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod slime_ai_tests {
+    use super::*;
+
+    // Expected ranges transcribed from the Java getMove branches. These test
+    // the rules for supplied rolls; they do not claim Java/Rust RNG parity.
+    #[test]
+    fn acid_first_move_ranges_cover_every_roll_and_ascension_boundary() {
+        for (asc, large, spit_end, tackle_end) in [
+            (0, false, 30, 70), (16, false, 30, 70),
+            (17, false, 40, 80), (20, false, 40, 80),
+            (0, true, 30, 70), (16, true, 30, 70),
+            (17, true, 40, 70), (20, true, 40, 70),
+        ] {
+            for roll in 0..100 {
+                let expected = if roll < spit_end { ACID_M_SPIT }
+                    else if roll < tackle_end { ACID_M_TACKLE } else { ACID_M_LICK };
+                let mut rng = Rng::new(42);
+                let (mv, _) = acid_get_move(roll, &[], asc, large, &mut rng);
+                assert_eq!(mv, expected, "A{asc} large={large} roll={roll}");
+                assert_eq!(rng.counter, 0, "normal branches must not consume a fallback roll");
+            }
+        }
+    }
+
+    #[test]
+    fn acid_repeat_limits_change_at_a17() {
+        // One Tackle is forbidden below A17; two are allowed starting at A17.
+        // One Lick may repeat below A17; it cannot repeat starting at A17.
+        for large in [false, true] {
+            let mut rng = Rng::new(42);
+            assert_eq!(acid_get_move(40, &[ACID_M_TACKLE], 17, large, &mut rng).0, ACID_M_TACKLE);
+            assert_eq!(acid_get_move(99, &[ACID_M_LICK], 16, large, &mut rng).0, ACID_M_LICK);
+            assert_eq!(rng.counter, 0);
+            acid_get_move(40, &[ACID_M_TACKLE], 16, large, &mut rng);
+            assert_eq!(rng.counter, 1);
+            acid_get_move(99, &[ACID_M_LICK], 17, large, &mut rng);
+            assert_eq!(rng.counter, 2);
+        }
+    }
+
+    #[derive(Clone, Copy)]
+    enum Coin { Boolean, Chance(f32) }
+
+    #[test]
+    fn acid_fallbacks_use_the_java_coin_type_and_probability() {
+        use Coin::*;
+        // asc, large, roll, prior move, repeat count, coin, true move, false move
+        let cases = [
+            (16, false, 0, ACID_M_SPIT, 2, Boolean, ACID_M_TACKLE, ACID_M_LICK),
+            (16, true, 29, ACID_M_SPIT, 2, Boolean, ACID_M_TACKLE, ACID_M_LICK),
+            (17, false, 39, ACID_M_SPIT, 2, Boolean, ACID_M_TACKLE, ACID_M_LICK),
+            (17, true, 39, ACID_M_SPIT, 2, Chance(0.6), ACID_M_TACKLE, ACID_M_LICK),
+            (16, false, 30, ACID_M_TACKLE, 1, Chance(0.4), ACID_M_SPIT, ACID_M_LICK),
+            (16, true, 69, ACID_M_TACKLE, 1, Chance(0.4), ACID_M_SPIT, ACID_M_LICK),
+            (17, false, 79, ACID_M_TACKLE, 2, Chance(0.5), ACID_M_SPIT, ACID_M_LICK),
+            (17, true, 69, ACID_M_TACKLE, 2, Chance(0.6), ACID_M_SPIT, ACID_M_LICK),
+            (16, false, 70, ACID_M_LICK, 2, Chance(0.4), ACID_M_SPIT, ACID_M_TACKLE),
+            (16, true, 99, ACID_M_LICK, 2, Chance(0.4), ACID_M_SPIT, ACID_M_TACKLE),
+            (17, false, 80, ACID_M_LICK, 1, Chance(0.4), ACID_M_SPIT, ACID_M_TACKLE),
+            (17, true, 70, ACID_M_LICK, 1, Chance(0.4), ACID_M_SPIT, ACID_M_TACKLE),
+        ];
+        for (asc, large, roll, previous, repeats, coin, yes, no) in cases {
+            let mut seen = [false; 2];
+            for seed in 0..128 {
+                let mut rng = Rng::new(seed);
+                let mut expected_rng = rng.clone();
+                let outcome = match coin {
+                    Boolean => expected_rng.random_bool(),
+                    Chance(chance) => expected_rng.random_bool_chance(chance),
+                };
+                let history = vec![previous; repeats];
+                assert_eq!(acid_get_move(roll, &history, asc, large, &mut rng).0,
+                    if outcome { yes } else { no });
+                seen[usize::from(outcome)] = true;
+                assert_eq!(rng.counter, 1);
+                assert_eq!(rng.random_int(99), expected_rng.random_int(99));
+            }
+            assert_eq!(seen, [true, true]);
+        }
+    }
+
+    #[test]
+    fn spike_move_ranges_and_repeat_restrictions() {
+        for large in [false, true] {
+            for asc in [0, 16, 17, 20] {
+                for roll in 0..100 {
+                    let expected = if roll < 30 { SPIKE_M_TACKLE } else { SPIKE_M_LICK };
+                    assert_eq!(spike_get_move(roll, &[], asc, large).0, expected);
+                    assert_eq!(spike_get_move(roll, &[SPIKE_M_TACKLE; 2], asc, large).0, SPIKE_M_LICK);
+                    assert_eq!(spike_get_move(roll, &[SPIKE_M_LICK; 2], asc, large).0, SPIKE_M_TACKLE);
+                    let after_lick = if asc >= 17 { SPIKE_M_TACKLE } else { expected };
+                    assert_eq!(spike_get_move(roll, &[SPIKE_M_LICK], asc, large).0, after_lick);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn small_acid_initial_choice_and_direct_alternation() {
+        for asc in [0, 16, 17, 20] {
+            for seed in 0..16 {
+                let mut ai = Rng::new(seed);
+                let mut expected_rng = ai.clone();
+                expected_rng.random_int(99); // AbstractMonster.rollMove
+                let first = if asc < 17 && expected_rng.random_bool() { ACID_S_TACKLE } else { ACID_S_LICK };
+                let mut hp = Rng::new(42);
+                let mut e = EnemyState::new(EnemyId::AcidSlimeSmall, asc, &mut hp, &mut ai);
+                assert_eq!(e.next_move, first);
+                let counter = ai.counter;
+                let mut player = CreatureState::new(1000, 1000);
+                for turn in 0..12 {
+                    let expected = if turn % 2 == 0 { first }
+                        else if first == ACID_S_TACKLE { ACID_S_LICK } else { ACID_S_TACKLE };
+                    assert_eq!(e.next_move, expected);
+                    e.take_turn(&mut player, &mut ai);
+                    assert_eq!(ai.counter, counter, "direct moves must not consume RNG");
+                }
+                assert_eq!(ai.random_int(99), expected_rng.random_int(99));
+            }
+        }
+    }
+
+    #[test]
+    fn boss_direct_cycle_does_not_consume_ai_rolls() {
+        let mut ai = Rng::new(42);
+        let mut hp = Rng::new(42);
+        let mut e = EnemyState::new(EnemyId::SlimeBoss, 20, &mut hp, &mut ai);
+        let mut player = CreatureState::new(1000, 1000);
+        let initial = ai.counter;
+        for turn in 0..12 {
+            assert_eq!(e.next_move, [SLIME_BOSS_GOOP, SLIME_BOSS_PREPARING, SLIME_BOSS_SLAM][turn % 3]);
+            e.take_turn(&mut player, &mut ai);
+            assert_eq!(ai.counter, initial);
+        }
+    }
+
+    #[test]
+    fn rolled_slime_moves_consume_primary_roll_and_only_required_fallback() {
+        for id in [EnemyId::AcidSlimeMedium, EnemyId::AcidSlimeLarge,
+            EnemyId::SpikeSlimeMedium, EnemyId::SpikeSlimeLarge, EnemyId::SpikeSlimeSmall] {
+            for seed in 0..128 {
+                let mut hp = Rng::new(42);
+                let mut ai = Rng::new(seed);
+                let mut e = EnemyState::new(id, 17, &mut hp, &mut ai);
+                e.move_history = vec![1, 1];
+                let mut expected_rng = ai.clone();
+                let roll = expected_rng.random_int(99);
+                if roll < 40 {
+                    match id {
+                        EnemyId::AcidSlimeMedium => { expected_rng.random_bool(); }
+                        EnemyId::AcidSlimeLarge => { expected_rng.random_bool_chance(0.6); }
+                        _ => {}
+                    }
+                }
+                e.roll_move(&mut ai, false);
+                assert_eq!(ai.counter, expected_rng.counter);
+                assert_eq!(ai.random_int(99), expected_rng.random_int(99));
+            }
+        }
     }
 }

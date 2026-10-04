@@ -137,7 +137,10 @@ fn split_uses_execution_hp_and_fresh_children_without_acting() {
         assert_eq!(encode_obs(&s)[ENEMY_OFFSET + 5..ENEMY_OFFSET + 8], [1.0, 0.0, 0.0]);
         assert_eq!(s.enemies.len(), 1);
         play(&mut s, CardId::Bash, 0); // 27, plus Vulnerable on parent
+        let ai_before = s.rng.ai.counter;
         step(&mut s, Action::EndTurn);
+        assert_eq!(s.rng.ai.counter - ai_before,
+            if parent == EnemyId::SpikeSlimeLarge { 3 } else { 2 });
         assert_eq!(s.player.creature.hp, 80);
         let live = enemy_indices(&s);
         assert_eq!(live.len(), 2);

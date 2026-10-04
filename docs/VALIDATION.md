@@ -3,6 +3,11 @@
 The simulator is an approximation under active development. Passing regression
 tests establishes the tested contracts, not full Slay the Spire parity.
 
+The original decompiled Java sources are now accessible in WSL.
+The initial static comparison is recorded in [JAVA_AUDIT.md](JAVA_AUDIT.md),
+including supported behavior and confirmed remaining differences. The sources
+remain gitignored; no live Java/Rust differential execution has been performed.
+
 ## Power and intent corrections (2026-10-03)
 
 Weak, Vulnerable and Frail decay at the end of the round, after enemy actions.
@@ -11,7 +16,7 @@ not reset that flag. Metallicize grants block at the end of the owner's turn,
 without Frail reduction. Ritual ticks at round end and skips its first tick;
 Demon Form remains a start-of-turn effect, and Flex expires at player turn end.
 
-The original decompiled Java files are absent from the WSL checkout. Timing was
+At the time of these changes, the decompiled Java files were absent from WSL. Timing was
 cross-checked against the independent `sts_lightspeed` implementation at commit
 `7476a81954020087da31d41d16fddf475746ec2d`:
 
@@ -42,7 +47,8 @@ Slime Boss now cycles Goop / Prepare / Slam beyond five turns. Prepare grants
 no block; Slam is 35 (38 at A4); Goop adds three Slimed (five at A19); boss HP is
 140 (150 at A9). Slime HP ranges, attack status counts, Lick debuffs, and large
 Acid Slime Tackle damage were also corrected. Random slime move selection and
-its ascension-dependent probabilities remain unaudited.
+its ascension-dependent probabilities were not corrected in this commit;
+the subsequent Java audit identified discrepancies corrected in the follow-up below.
 
 These contracts were cross-checked against the same independent implementation:
 
@@ -52,10 +58,27 @@ These contracts were cross-checked against the same independent implementation:
 - [Monster HP ranges](https://github.com/gamerpuppy/sts_lightspeed/blob/7476a81954020087da31d41d16fddf475746ec2d/include/constants/MonsterIds.h#L152)
 - [Ethereal hand cleanup](https://github.com/gamerpuppy/sts_lightspeed/blob/7476a81954020087da31d41d16fddf475746ec2d/src/combat/BattleContext.cpp#L2492)
 
+## Java-guided AI and hook-order corrections
+
+The local Java comparison and source paths are recorded in
+[JAVA_AUDIT.md](JAVA_AUDIT.md). Acid/Spike slime move probabilities, repeat
+restrictions, and fallback RNG decisions now follow those classes. Small Acid
+Slime and Slime Boss set their next moves without extra AI rolls. Spike L's
+discarded parent roll after splitting is preserved. Demon Form runs after the
+normal draw, and all monster end-turn hooks precede player then monster
+round-end hooks.
+
+Validation: 63 Rust tests and 15 Python/Gymnasium tests pass, including eight
+new AI/power tests and the existing 100 seeded combat episodes. Tests exercise
+all primary AI rolls, ascension boundaries, repeat histories, fallback outcomes
+and RNG call counts. The Java sources are references, not an executed oracle.
+Interface v3 dimensions are unchanged; v3 policies need reevaluation because
+combat behavior and subsequent seeded outcomes changed.
+
 ## Remaining fidelity work
 
-- Slime AI probabilities, Lagavulin behavior, Guardian Mode Shift, and several
-  other enemy effects are still approximations.
+- Lagavulin behavior, Guardian Mode Shift, and several other enemy effects
+  are still approximations.
 - Some cards automatically select a card for upgrade/exhaust/discard instead
   of exposing a choice. Card upgrade costs and other effects need an audit.
 - Java RNG sequence parity and live-game trace comparison are not established.

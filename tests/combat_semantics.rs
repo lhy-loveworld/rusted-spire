@@ -81,6 +81,21 @@ fn strength_precedes_weak_regardless_of_application_order() {
 }
 
 #[test]
+fn demon_form_uses_post_draw_hook_and_does_not_trigger_on_extra_draws() {
+    let mut s = state(&[CardId::Strike; 10], &[EnemyId::Cultist]);
+    s.player.creature.apply_power(PowerId::DemonForm, 3);
+    s.player.creature.trigger_start_of_turn();
+    assert_eq!(s.player.creature.power_amount(PowerId::Strength), 0);
+    s.player.creature.trigger_start_of_turn_post_draw();
+    assert_eq!(s.player.creature.power_amount(PowerId::Strength), 3);
+    s.player.draw(1, &mut s.rng.shuffle);
+    assert_eq!(s.player.creature.power_amount(PowerId::Strength), 3);
+    step(&mut s, Action::EndTurn);
+    assert_eq!(s.player.hand.len(), 5);
+    assert_eq!(s.player.creature.power_amount(PowerId::Strength), 6);
+}
+
+#[test]
 fn zero_amount_debuff_has_no_effect_or_negative_duration() {
     let mut c = CreatureState::new(80, 80);
     c.apply_power(PowerId::Weak, 0);

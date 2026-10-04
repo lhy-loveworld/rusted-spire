@@ -64,9 +64,10 @@ impl PlayerState {
     /// Called at the start of each player turn.
     pub fn start_turn(&mut self, shuffle_rng: &mut Rng) {
         self.creature.lose_block();
-        self.creature.trigger_start_of_turn(); // DemonForm Strength, etc.
+        self.creature.trigger_start_of_turn();
         self.energy = self.energy_master;
         self.draw(HAND_SIZE, shuffle_rng);
+        self.creature.trigger_start_of_turn_post_draw();
     }
 
     /// Exhaust Ethereal cards, then discard the rest before enemies act.
