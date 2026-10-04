@@ -81,6 +81,9 @@ order, have its remaining HP as both current and max HP, and do not act in the
 phase in which they spawn. A lethal hit prevents splitting. Use the returned
 mask after every transition, since splitting changes the target slots.
 
+Wound and Dazed have cost -2 (normalized to -2/3) and remain unplayable. See
+[COMBAT_TRACES.md](COMBAT_TRACES.md) for the executed-bytecode cost and reaction checks.
+
 Candidate slots expose selectable cards only while a prompt is active; unused
 slots and the entire selection section outside a prompt are zero. The first 196
 fields retain their v4 offsets. This remains a partial observation: draw order,

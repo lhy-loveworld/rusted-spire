@@ -469,6 +469,7 @@ fn finish_card(state: &mut CombatState, card: Card, retaliation: Vec<i32>) {
         }
     }
     for enemy in &mut state.enemies {
+        enemy.creature.resolve_attack_reactions();
         enemy.resolve_card_reactions();
     }
 }

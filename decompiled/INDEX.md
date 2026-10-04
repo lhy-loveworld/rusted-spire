@@ -205,7 +205,10 @@ Notable: Apotheosis, Bite, Chrysalis, DramaticEntrance, Enlightenment, HandOfGre
 ## Actions (action queue pattern)
 
 The game uses an action queue (`GameActionManager`). Cards enqueue actions; actions execute sequentially during `update()`.  
-**For a headless sim, the action queue is unnecessary — effects can be applied immediately.**
+**Queue order matters even without rendering.** Multi-hit reactions such as
+Curl Up enqueue block after the remaining hits; card selections can suspend
+resolution. Immediate execution must preserve these ordering boundaries. See
+`docs/COMBAT_TRACES.md` for executed original-bytecode comparisons.
 
 ### `actions/common/` — bread-and-butter actions
 | Class | Effect |

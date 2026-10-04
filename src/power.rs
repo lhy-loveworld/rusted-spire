@@ -397,10 +397,10 @@ pub struct CurlUpPower { pub block: i32, pub triggered: bool }
 
 impl Power for CurlUpPower {
     fn power_id(&self) -> PowerId { PowerId::CurlUp }
-    // amount() returns 0 once triggered so `retain` removes it automatically
-    fn amount(&self) -> i32 { if self.triggered { 0 } else { self.block } }
+    // Remains visible until the queued GainBlock/RemovePower actions resolve.
+    fn amount(&self) -> i32 { self.block }
     fn stack(&mut self, n: i32) { self.block += n; }
-    fn reduce(&mut self, _n: i32) { self.triggered = true; }
+    fn reduce(&mut self, n: i32) { self.block = (self.block - n).max(0); }
 }
 
 // --- Anger: gain Strength each time the player plays a Skill ---

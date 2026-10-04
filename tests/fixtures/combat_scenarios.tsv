@@ -1,0 +1,46 @@
+# case name seed hand draw(next first) discard player_powers enemy_powers player_block enemy_block
+# Actors start with player HP 80/80, energy 3, target HP 200/200. Powers are explicit.
+case	bash_strike	42	Bash,Strike	-	-	-	-	0	0
+play	0
+play	0
+case	curl_multihit	42	TwinStrike,Strike	-	-	-	CurlUp:9	0	0
+play	0
+play	0
+case	curl_blocked	42	TwinStrike+,Strike	-	-	-	CurlUp:9	0	7
+play	0
+play	0
+case	strength_weak_vulnerable	42	Inflame+,HeavyBlade+	-	-	Weak:2	Vulnerable:2	0	0
+play	0
+play	0
+case	negative_strength	42	HeavyBlade+	-	-	Strength:-2,Weak:2	Vulnerable:2	0	0
+play	0
+case	entrench	42	Defend+,Entrench+	-	-	Dexterity:2,Frail:2	-	0	0
+play	0
+play	0
+case	pommel_reshuffle	42	PommelStrike+	-	Strike,Defend,Bash	-	-	0	0
+play	0
+case	warcry_old_card	42	Warcry+,Defend	Strike,Bash	-	-	-	0	0
+play	0
+choose	0
+case	warcry_singleton	42	Warcry,Strike	-	-	-	-	0	0
+play	0
+case	armaments_filtered	42	Armaments,Wound,Entrench,Strike+,Defend	-	-	-	Anger:2	0	0
+play	0
+choose	0
+play	1
+case	armaments_all	42	Armaments+,BodySlam,Defend,Wound	-	-	-	-	0	0
+play	0
+play	1
+play	0
+case	true_grit_choice	42	TrueGrit+,Strike,Wound	-	-	-	Anger:2	0	0
+play	0
+choose	1
+case	true_grit_singleton	42	TrueGrit,Wound	-	-	-	-	0	0
+play	0
+case	headbutt_choice	42	Headbutt+	-	Strike,Defend+	-	SharpHide:3	0	0
+play	0
+choose	1
+case	headbutt_curl_choice	42	Headbutt,Strike	-	Defend,Dazed	-	CurlUp:9	0	0
+play	0
+choose	1
+play	0

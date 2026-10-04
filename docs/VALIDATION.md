@@ -92,11 +92,20 @@ reshuffles are tested. Validation: 66 Rust tests and 15 Python/Gymnasium tests
 pass, including the existing 100 seeded episodes. No JDK or game installation
 is required to run the committed fixture tests.
 
+## Executed original-bytecode action traces
+
+[COMBAT_TRACES.md](COMBAT_TRACES.md) documents 44 matching snapshots across 15
+controlled scenarios executed from the local original JAR. The driver preserves
+original card/action/damage methods but supplies controlled actors, mock graphics
+and an isolated queue scheduler. It does not establish full fight/turn/AI parity.
+The comparison found and fixed early Curl Up block and Wound/Dazed cost encoding.
+101 Rust tests and 28 Python/Gym tests pass; fixtures include provenance hashes.
+
 ## Remaining fidelity work
 
 - Lagavulin and Guardian now have source-derived corrections; see
-  [ELITE_BOSS_AUDIT.md](ELITE_BOSS_AUDIT.md). Other enemy AI/effects, queued Curl Up
-  timing, and unsupported reactions still require audits.
+  [ELITE_BOSS_AUDIT.md](ELITE_BOSS_AUDIT.md). Other enemy AI/effects and unsupported reactions still require audits. Curl Up
+  timing now matches the executed action traces described above.
 - Armaments, True Grit+, Warcry and Headbutt now expose choices (see below).
   Other card effects and interactions still need audits.
 - Full combat RNG call order and live-game trace comparison are not established;

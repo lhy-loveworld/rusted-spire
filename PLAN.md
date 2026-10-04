@@ -36,8 +36,10 @@ Card-in-use cleanup, draw boundaries, power removal and several upgrade effects
 are corrected. Explicit card selection is now implemented in interface v5 (242 observations /
 73 actions) for Armaments, True Grit+, Warcry and Headbutt, including paged discard
 choices and Armaments+ upgrade-all. See docs/CARD_SELECTION.md for evidence and
-validation. Next simulator priority: controlled original-game combat traces and
-remaining card/enemy audits before full-run expansion.
+validation. The first executed original-JAR action suite now matches 44 snapshots across 15
+controlled scenarios and fixed Curl Up timing/status costs; see docs/COMBAT_TRACES.md.
+Next simulator priority: extend the original-game oracle to full turn transitions,
+enemy AI and encounter initialization, then longer seeded fights before full-run expansion.
 
 ---
 

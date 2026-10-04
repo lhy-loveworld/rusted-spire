@@ -62,4 +62,6 @@ rolled HP and corrects the order of pre-battle calls. Other effect call order,
 monster AI, generated-card insertion and selected-card mechanics still need
 audits and controlled combat traces. Record the original JAR checksum and build
 when available. Seeded outcomes from earlier revisions are not directly
-comparable; the current interface is v4 (196 observations / 61 actions).
+comparable; the current interface is v5 (242 observations / 73 actions). The first
+[original-bytecode action traces](COMBAT_TRACES.md) now check card/shuffle RNG
+counters across controlled card sequences; whole-combat RNG parity remains open.

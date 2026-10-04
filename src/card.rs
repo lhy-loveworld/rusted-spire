@@ -121,8 +121,8 @@ pub fn base_cost(id: CardId) -> i32 {
         CardId::Metallicize  => 1,
         CardId::DemonForm    => 3,
         CardId::Slimed       => 1,
-        CardId::Wound        => 99, // effectively unplayable
-        CardId::Dazed        => 99,
+        CardId::Wound        => -2, // original game's unplayable sentinel
+        CardId::Dazed        => -2,
     }
 }
 

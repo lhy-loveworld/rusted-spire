@@ -125,17 +125,25 @@ impl CreatureState {
         if dtype != DamageType::Normal || hp_lost <= 0 || self.is_dead() {
             return;
         }
-        let mut curl_block = 0i32;
         for p in &mut self.powers {
-            if p.id() == PowerId::CurlUp && p.amount() > 0 {
-                curl_block += p.amount();
-                p.reduce(1); // sets triggered=true → amount()=0 → retain removes it
+            if let PowerState::CurlUp(curl) = p {
+                curl.triggered = true;
             }
         }
-        self.powers.retain(|p| p.amount() != 0);
-        if curl_block > 0 {
-            self.add_block(curl_block);
-        }
+    }
+
+    /// CurlUpPower queues block behind the current card's remaining effects.
+    /// Do not let its block absorb subsequent hits from that same card.
+    pub fn resolve_attack_reactions(&mut self) {
+        if self.is_dead() { return; }
+        let mut block = 0;
+        self.powers.retain(|p| {
+            if let PowerState::CurlUp(curl) = p {
+                if curl.triggered { block += curl.block; return false; }
+            }
+            true
+        });
+        self.block = (self.block + block).min(999);
     }
 
     /// Called when the player plays a Skill card; triggers Anger → Strength gain.
