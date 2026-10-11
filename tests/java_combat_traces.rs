@@ -14,6 +14,8 @@ fn power_id(name: &str) -> PowerId {
         "Weak" => PowerId::Weak, "Vulnerable" => PowerId::Vulnerable,
         "Frail" => PowerId::Frail, "CurlUp" => PowerId::CurlUp,
         "Anger" => PowerId::Anger, "SharpHide" => PowerId::SharpHide,
+        "Metallicize" => PowerId::Metalicize, "DemonForm" => PowerId::DemonForm,
+        "LoseStrength" => PowerId::StrengthDown, "Ritual" => PowerId::Ritual,
         _ => panic!("unmapped fixture power {name}"),
     }
 }
@@ -32,7 +34,10 @@ fn card_list(cards: &[Card]) -> String {
     joined(cards.iter().map(|c| format!("{}:{}", c.spec(), c.cost)).collect())
 }
 fn power_list(creature: &CreatureState) -> String {
-    let mut result: Vec<_> = creature.powers.iter().map(|p| format!("{:?}:{}", p.id(), p.amount())).collect();
+    let mut result: Vec<_> = creature.powers.iter().map(|p| format!("{}:{}", match p.id() {
+        PowerId::Metalicize => "Metallicize".into(), PowerId::StrengthDown => "LoseStrength".into(),
+        id => format!("{id:?}"),
+    }, p.amount())).collect();
     result.sort(); joined(result)
 }
 fn snapshot(s: &CombatState, case: &str, index: usize) -> Vec<String> {
@@ -57,12 +62,22 @@ fn snapshot(s: &CombatState, case: &str, index: usize) -> Vec<String> {
 
 #[test]
 fn controlled_actions_match_original_jar_snapshots() {
+    compare(include_str!("fixtures/java_combat.tsv"), include_str!("fixtures/combat_scenarios.tsv"), false);
+}
+
+#[test]
+fn controlled_turns_match_original_jar_snapshots() {
+    compare(include_str!("fixtures/java_turns.tsv"), include_str!("fixtures/turn_scenarios.tsv"), true);
+}
+
+fn compare(expected_text: &'static str, directives_text: &'static str, turns: bool) {
     let rows = |text: &'static str| text.lines().filter(|l| !l.starts_with('#') && !l.is_empty());
-    let expected: Vec<_> = rows(include_str!("fixtures/java_combat.tsv")).collect();
-    let directives: Vec<_> = rows(include_str!("fixtures/combat_scenarios.tsv")).collect();
+    let expected: Vec<_> = rows(expected_text).collect();
+    let directives: Vec<_> = rows(directives_text).collect();
     assert_eq!(directives.len(), expected.len(), "every directive needs an oracle snapshot");
-    let fields = ["case", "step", "phase", "hp", "block", "energy", "hand", "draw", "discard", "exhaust",
+    let mut fields = vec!["case", "step", "phase", "hp", "block", "energy", "hand", "draw", "discard", "exhaust",
         "enemy_hp", "enemy_block", "player_powers", "enemy_powers", "card_rng", "shuffle_rng", "choices"];
+    if turns { fields.extend(["turn", "enemy_move", "intent_damage", "ai_rng"]); }
     let mut state = None;
     let mut case = "";
     let mut index = 0;
@@ -73,15 +88,17 @@ fn controlled_actions_match_original_jar_snapshots() {
             "case" => {
                 case = row[1]; index = 0;
                 let seed = row[2].parse().unwrap();
-                let mut s = CombatState::new(vec![], &[EnemyId::Cultist], seed, 0, 80);
+                let mut s = CombatState::new(vec![], &[EnemyId::Cultist], seed, if turns { row[10].parse().unwrap() } else { 0 }, 80);
                 // Controlled setup bypasses both games' constructors/opening draw.
                 s.rng = RngBundle::new(seed);
+                if turns { s.enemies[0].roll_move(&mut s.rng.ai, true); }
                 s.player.hand = cards(row[3]); s.player.draw_pile = cards(row[4]);
                 s.player.discard_pile = cards(row[5]);
                 powers(&mut s.player.creature, row[6]); powers(&mut s.enemies[0].creature, row[7]);
                 s.player.creature.block = row[8].parse().unwrap();
                 s.enemies[0].creature.block = row[9].parse().unwrap();
                 s.enemies[0].creature.hp = 200; s.enemies[0].creature.max_hp = 200;
+                s.refresh_intents();
                 state = Some(s);
             }
             "play" | "choose" => {
@@ -89,9 +106,17 @@ fn controlled_actions_match_original_jar_snapshots() {
                     else { Action::SelectCard { option_idx: row[1].parse().unwrap() } };
                 step(state.as_mut().unwrap(), action); index += 1;
             }
+            "end" => { step(state.as_mut().unwrap(), Action::EndTurn); index += 1; }
             other => panic!("unknown directive {other}"),
         }
-        let actual = snapshot(state.as_ref().unwrap(), case, index);
+        let s = state.as_ref().unwrap();
+        let mut actual = snapshot(s, case, index);
+        if turns {
+            let enemy = &s.enemies[0];
+            let damage = match enemy.intent { rusted_spire::enemy::Intent::Attack(n) => n, _ => 0 };
+            actual.extend([s.turn.to_string(), match enemy.next_move { 3 => "incantation", 1 => "dark_strike", other => panic!("unexpected Cultist move {other}") }.into(),
+                damage.to_string(), s.rng.ai.counter.to_string()]);
+        }
         let expected: Vec<_> = expected.split('\t').collect();
         assert_eq!(expected.len(), fields.len());
         for (i, (actual, expected)) in actual.iter().zip(expected).enumerate() {

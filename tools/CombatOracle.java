@@ -96,6 +96,7 @@ public class CombatOracle {
         }
         CardCrawlGame.languagePack=new LocalizedStrings();
         TipTracker.tips.put(TipTracker.SHUFFLE_TIP,true);
+        TipTracker.tips.put(TipTracker.INTENT_TIP,true);
         com.badlogic.gdx.utils.GdxNativesLoader.load();
         Texture texture=new Texture(1,1,Pixmap.Format.RGBA8888);
         TextureAtlas atlas=new TextureAtlas(){
@@ -121,6 +122,7 @@ public class CombatOracle {
     static AbstractGameAction current;
     static String scenario;
     static int step;
+    static boolean turns;
     static List<AbstractCard> logicalHand;
     static AbstractCard inUse;
     static List<String> actionLog = new ArrayList<>();
@@ -153,7 +155,11 @@ public class CombatOracle {
     }
     static void reset(String[] row)throws Exception {
         scenario=row[1];
+        AbstractDungeon.fadeColor=Color.BLACK.cpy();
         step=0;
+        turns=row.length==11;
+        AbstractDungeon.ascensionLevel=turns?Integer.parseInt(row[10]):0;
+        GameActionManager.turn=1;
         current=null;
         inUse=null;
         logicalHand=null;
@@ -183,7 +189,14 @@ public class CombatOracle {
         player.limbo=new CardGroup(CardGroup.CardGroupType.UNSPECIFIED);
         player.stance=new com.megacrit.cardcrawl.stances.NeutralStance();
         player.energy=new EnergyManager(3);
+        player.energy.prep();
+        player.gameHandSize=5;
         player.tint=new TintEffect();
+        com.esotericsoftware.spine.SkeletonData skeleton=new com.esotericsoftware.spine.SkeletonData();
+        for(String name:List.of("Hit","Idle"))skeleton.getAnimations().add(
+            new com.esotericsoftware.spine.Animation(name,new com.badlogic.gdx.utils.Array<>(),0));
+        player.state=new com.esotericsoftware.spine.AnimationState(
+            new com.esotericsoftware.spine.AnimationStateData(skeleton));
         AbstractDungeon.player=player;
         AbstractDungeon.overlayMenu=new OverlayMenu(player);
         monster=alloc(Cultist.class);
@@ -200,11 +213,18 @@ public class CombatOracle {
         MapRoomNode node=new MapRoomNode(0,0);
         node.room=room;
         AbstractDungeon.currMapNode=node;
+        if(turns){
+            set(monster,Cultist.class,"firstMove",true);
+            set(monster,Cultist.class,"ritualAmount",AbstractDungeon.ascensionLevel>=2?4:3);
+            monster.rollMove();
+            monster.createIntent();
+        }
         pile(player.hand,row[3],false);
         pile(player.drawPile,row[4],true);
         pile(player.discardPile,row[5],false);
         powers(player,row[6]);
         powers(monster,row[7]);
+        if(turns)monster.applyPowers();
         player.currentBlock=Integer.parseInt(row[8]);
         monster.currentBlock=Integer.parseInt(row[9]);
         com.megacrit.cardcrawl.ui.panels.EnergyPanel.totalCount=3;
@@ -229,6 +249,33 @@ public class CombatOracle {
         }
         inUse=null;
         logicalHand=null;
+    }
+    // Drive the original action manager through a whole round. The sole room-loop
+    // handoff mirrors AbstractPlayer.updateInput/AbstractRoom.update after the
+    // end-turn card queue has drained; combat effects remain original bytecode.
+    static void endTurn() throws Exception {
+        if(!turns||!phase().equals("play"))throw new IllegalStateException("invalid end turn");
+        GameActionManager manager=AbstractDungeon.actionManager;
+        int before=GameActionManager.turn;
+        AbstractDungeon.overlayMenu.endTurnButton.disable(true);
+        AbstractGameAction previous=null;
+        for(int ticks=0;ticks<10000;ticks++){
+            AbstractDungeon.getCurrRoom().souls.update();
+            manager.update();
+            if(manager.currentAction!=null&&manager.currentAction!=previous)
+                actionLog.add(manager.currentAction.getClass().isAnonymousClass()
+                    ?manager.currentAction.getClass().getName():manager.currentAction.getClass().getSimpleName());
+            previous=manager.currentAction;
+            if(player.endTurnQueued&&manager.cardQueue.isEmpty()&&!manager.hasControl){
+                player.endTurnQueued=false;
+                AbstractDungeon.getCurrRoom().endTurn();
+            }
+            if(AbstractDungeon.isScreenUp)throw new IllegalStateException("unsupported turn prompt");
+            if(GameActionManager.turn==before+1 && !manager.hasControl && manager.currentAction==null
+                && manager.actions.isEmpty() && manager.preTurnActions.isEmpty() && manager.cardQueue.isEmpty()
+                && manager.monsterQueue.isEmpty() && AbstractDungeon.overlayMenu.endTurnButton.enabled)return;
+        }
+        throw new IllegalStateException("turn exceeded 10000 updates: "+manager.currentAction);
     }
     static String phase(){
         if(!AbstractDungeon.isScreenUp)return "play";
@@ -259,6 +306,13 @@ public class CombatOracle {
         Collections.sort(out);
         return out.isEmpty()?"-":String.join(",",out);
     }
+    static String moveName(){
+        return switch(monster.nextMove){
+            case 3 -> "incantation";
+            case 1 -> "dark_strike";
+            default -> throw new IllegalStateException("unexpected Cultist move "+monster.nextMove);
+        };
+    }
     static void snapshot(){
         String phase=phase();
         System.out.println("QUEUE\t"+scenario+"\t"+step+"\t"+(current==null?"-":current.getClass().getSimpleName())+"\t"+(actionLog.isEmpty()?"-":String.join(",",actionLog)));
@@ -270,7 +324,9 @@ public class CombatOracle {
         ""+player.currentHealth,""+player.currentBlock,""+com.megacrit.cardcrawl.ui.panels.EnergyPanel.totalCount,
         cards(hand,false),cards(player.drawPile.group,true),cards(player.discardPile.group,false),cards(player.exhaustPile.group,false),
         ""+monster.currentHealth,""+monster.currentBlock,powers(player),powers(monster),""+AbstractDungeon.cardRandomRng.counter,""+AbstractDungeon.shuffleRng.counter,
-        phase.equals("play")?"-":cards(options(),false)));
+        (phase.equals("play")?"-":cards(options(),false)))
+        +(turns?"\t"+GameActionManager.turn+"\t"+moveName()
+            +"\t"+monster.getIntentDmg()+"\t"+AbstractDungeon.aiRng.counter:""));
     }
     public static void main(String[] args)throws Exception {
         initialize();
@@ -289,6 +345,10 @@ public class CombatOracle {
                 inUse.applyPowers();
                 player.useCard(inUse,monster,com.megacrit.cardcrawl.ui.panels.EnergyPanel.totalCount);
                 drain();
+                ++step;
+                break;
+                case "end":
+                endTurn();
                 ++step;
                 break;
                 case "choose":

@@ -72,13 +72,17 @@ impl PlayerState {
 
     /// Exhaust Ethereal cards, then discard the rest before enemies act.
     pub fn end_turn(&mut self) {
+        let mut discard = Vec::with_capacity(self.hand.len());
         for card in self.hand.drain(..) {
             if crate::card::is_ethereal(card.id) {
                 self.exhaust_pile.push(card);
             } else {
-                self.discard_pile.push(card);
+                discard.push(card);
             }
         }
+        // DiscardAction repeatedly removes CardGroup.getTopCard(): the last
+        // hand entry. This order becomes observable after the next shuffle.
+        self.discard_pile.extend(discard.into_iter().rev());
     }
 }
 

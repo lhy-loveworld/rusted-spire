@@ -1,0 +1,47 @@
+# Controlled Cultist rounds; final case field is ascension.
+case	cultist_a0	42	Strike,Defend,Dazed	Bash,Strike,Defend,Anger,ShrugItOff	-	-	-	7	9	0
+end
+end
+end
+case	cultist_a17	42	Strike,Defend	Bash,Strike,Defend,Anger,ShrugItOff	-	-	-	0	0	17
+end
+end
+end
+case	cultist_a1	101	Strike,Defend	Bash,Strike,Defend,Anger,ShrugItOff	Wound	-	-	0	0	1
+end
+play	0
+play	1
+end
+end
+case	cultist_a2	102	Strike,Defend	Bash,Strike,Defend,Anger,ShrugItOff	Wound	-	-	0	0	2
+end
+play	0
+play	1
+end
+end
+case	cultist_a16	116	Strike,Defend	Bash,Strike,Defend,Anger,ShrugItOff	Wound	-	-	0	0	16
+end
+play	0
+play	1
+end
+end
+case	cultist_a20	120	Strike,Defend	Bash,Strike,Defend,Anger,ShrugItOff	Wound	-	-	0	0	20
+end
+play	0
+play	1
+end
+end
+case	power_timing	7	Flex,Strike,Defend	Strike,Defend,IronWave,Anger,Bash	Wound	DemonForm:2,Metallicize:3,Frail:2,Weak:2,Vulnerable:2	Weak:2,Vulnerable:2,Metallicize:4	0	0	0
+play	0
+play	0
+end
+play	1
+end
+end
+case	energy_and_block	99	DemonForm,Defend	Bash,Strike,Defend,Anger,ShrugItOff	Wound,Dazed	-	-	0	0	0
+play	0
+end
+play	2
+play	0
+end
+end

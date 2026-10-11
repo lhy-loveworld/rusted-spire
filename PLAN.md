@@ -38,8 +38,11 @@ are corrected. Explicit card selection is now implemented in interface v5 (242 o
 choices and Armaments+ upgrade-all. See docs/CARD_SELECTION.md for evidence and
 validation. The first executed original-JAR action suite now matches 44 snapshots across 15
 controlled scenarios and fixed Curl Up timing/status costs; see docs/COMBAT_TRACES.md.
-Next simulator priority: extend the original-game oracle to full turn transitions,
-enemy AI and encounter initialization, then longer seeded fights before full-run expansion.
+The turn extension adds 46 matching snapshots across eight Cultist scenarios,
+using the original action manager. It fixed end-turn discard order and A17+
+Ritual; total coverage is 90 snapshots, with 102 Rust and 29 Python/Gym tests.
+Next simulator priority: execute random enemy AI (starting with Jaw Worm), then
+encounter initialization and longer seeded fights before full-run expansion.
 
 ---
 

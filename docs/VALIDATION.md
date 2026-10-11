@@ -92,14 +92,21 @@ reshuffles are tested. Validation: 66 Rust tests and 15 Python/Gymnasium tests
 pass, including the existing 100 seeded episodes. No JDK or game installation
 is required to run the committed fixture tests.
 
-## Executed original-bytecode action traces
+## Executed original-bytecode action and turn traces
 
-[COMBAT_TRACES.md](COMBAT_TRACES.md) documents 44 matching snapshots across 15
-controlled scenarios executed from the local original JAR. The driver preserves
-original card/action/damage methods but supplies controlled actors, mock graphics
-and an isolated queue scheduler. It does not establish full fight/turn/AI parity.
-The comparison found and fixed early Curl Up block and Wound/Dazed cost encoding.
-101 Rust tests and 28 Python/Gym tests pass; fixtures include provenance hashes.
+[COMBAT_TRACES.md](COMBAT_TRACES.md) documents 90 matching snapshots: 44 across 15
+card-action scenarios and 46 across eight controlled Cultist turn scenarios.
+The driver preserves original card/action/damage methods and runs the original
+action manager for turn transitions, while supplying controlled actors and mock
+graphics. It does not establish constructor, full-fight or other-enemy parity.
+
+The comparison found and fixed early Curl Up block, Wound/Dazed cost encoding,
+reversed end-turn discard order and too little Cultist Ritual at Ascension 17+.
+Turn coverage includes power timing, energy/block reset, subsequent hands, intents
+and AI RNG counters. Both suites regenerate identically; 102 Rust tests and 29
+Python/Gym tests pass. Fixtures include provenance hashes and run without the JAR
+in CI. Interface v5 dimensions are unchanged, but seeded trajectories change;
+existing policies and benchmark results need reevaluation.
 
 ## Remaining fidelity work
 

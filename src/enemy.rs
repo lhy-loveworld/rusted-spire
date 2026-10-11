@@ -516,7 +516,7 @@ fn cultist_get_move(first_move: bool) -> (u8, Intent) {
 fn cultist_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
     match enemy.next_move {
         CULTIST_INCANTATION => {
-            let ritual = if enemy.ascension >= 2 { 4 } else { 3 };
+            let ritual = if enemy.ascension >= 17 { 5 } else if enemy.ascension >= 2 { 4 } else { 3 };
             enemy.creature.apply_power(PowerId::Ritual, ritual);
         }
         CULTIST_DARK_STRIKE => {

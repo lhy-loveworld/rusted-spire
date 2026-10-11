@@ -8,15 +8,21 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class TraceProvenanceTests(unittest.TestCase):
-    def test_fixture_and_driver_hashes_match_recorded_provenance(self):
-        metadata = json.loads((ROOT / "tests/fixtures/java_combat.json").read_text())
+    def test_action_provenance(self):
+        self.check_provenance("java_combat", "combat_scenarios")
+
+    def test_turn_provenance(self):
+        self.check_provenance("java_turns", "turn_scenarios")
+
+    def check_provenance(self, fixture, scenarios):
+        metadata = json.loads((ROOT / f"tests/fixtures/{fixture}.json").read_text())
         for key, name in [
             ("harness_sha256", "tools/CombatOracle.java"),
-            ("scenarios_sha256", "tests/fixtures/combat_scenarios.tsv"),
-            ("fixture_sha256", "tests/fixtures/java_combat.tsv"),
+            ("scenarios_sha256", f"tests/fixtures/{scenarios}.tsv"),
+            ("fixture_sha256", f"tests/fixtures/{fixture}.tsv"),
         ]:
             self.assertEqual(hashlib.sha256((ROOT / name).read_bytes()).hexdigest(), metadata[key], name)
-        lines = (ROOT / "tests/fixtures/java_combat.tsv").read_text().splitlines()
+        lines = (ROOT / f"tests/fixtures/{fixture}.tsv").read_text().splitlines()
         self.assertEqual(sum(bool(line) and not line.startswith("#") for line in lines), metadata["rows"])
         self.assertEqual(len(metadata["action_queues"]), metadata["rows"])
 
