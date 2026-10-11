@@ -40,9 +40,11 @@ validation. The first executed original-JAR action suite now matches 44 snapshot
 controlled scenarios and fixed Curl Up timing/status costs; see docs/COMBAT_TRACES.md.
 The turn extension adds 46 matching snapshots across eight Cultist scenarios,
 using the original action manager. It fixed end-turn discard order and A17+
-Ritual; total coverage is 90 snapshots, with 102 Rust and 29 Python/Gym tests.
-Next simulator priority: execute random enemy AI (starting with Jaw Worm), then
-encounter initialization and longer seeded fights before full-run expansion.
+Ritual. Jaw Worm now adds 200 snapshots across 25 scenarios, with all six random
+fallback outcomes covered. Fixed missing fallback rolls, Chomp ascension damage,
+and Bellow Strength/block scaling. Total: 290 snapshots, 106 Rust tests and 30
+Python/Gym tests. Next simulator priority: actual encounter initialization and
+opening draws, then seeded fights through victory/defeat before full-run expansion.
 
 ---
 

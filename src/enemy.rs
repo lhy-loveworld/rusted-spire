@@ -110,7 +110,7 @@ impl EnemyState {
         use EnemyId::*;
         let asc = self.ascension;
         let base = match (self.id, self.next_move) {
-            (JawWorm, JAW_WORM_CHOMP) => 11,
+            (JawWorm, JAW_WORM_CHOMP) => if asc >= 2 { 12 } else { 11 },
             (JawWorm, JAW_WORM_THRASH) => 7,
             (Cultist, CULTIST_DARK_STRIKE) => 6,
             (LouseNormal | LouseDefensive, LOUSE_BITE) => self.var_damage,
@@ -414,7 +414,7 @@ const GUARDIAN_VENT:        u8 = 7;
 fn get_move(id: EnemyId, roll: i32, history: &[u8], first_move: bool,
             creature: &CreatureState, var_damage: i32, asc: u8, ai_rng: &mut Rng) -> (u8, Intent) {
     match id {
-        EnemyId::JawWorm        => jaw_worm_get_move(roll, history, first_move),
+        EnemyId::JawWorm        => jaw_worm_get_move(roll, history, first_move, asc, ai_rng),
         EnemyId::Cultist        => cultist_get_move(first_move),
         EnemyId::LouseNormal    => louse_get_move(roll, history, var_damage, false),
         EnemyId::LouseDefensive => louse_get_move(roll, history, var_damage, true),
@@ -468,22 +468,30 @@ fn execute_move(enemy: &mut EnemyState, player: &mut CreatureState) {
 // Jaw Worm
 // ---------------------------------------------------------------------------
 
-fn jaw_worm_get_move(roll: i32, history: &[u8], first_move: bool) -> (u8, Intent) {
-    let last     = |mv| history.last() == Some(&mv);
-    let last_two = |mv| history.len() >= 2 && history[history.len()-1] == mv && history[history.len()-2] == mv;
+fn jaw_worm_get_move(roll: i32, history: &[u8], first_move: bool, asc: u8, ai_rng: &mut Rng) -> (u8, Intent) {
+    let last = |mv| history.last() == Some(&mv);
+    let last_two = |mv| history.ends_with(&[mv, mv]);
+    let chomp = (JAW_WORM_CHOMP, Intent::Attack(if asc >= 2 { 12 } else { 11 }));
+    let thrash = (JAW_WORM_THRASH, Intent::AttackDefend(7));
+    let bellow = (JAW_WORM_BELLOW, Intent::Buff);
 
-    if first_move { return (JAW_WORM_CHOMP, Intent::Attack(11)); }
-
-    if roll < 25 {
-        if last(JAW_WORM_CHOMP) { return (JAW_WORM_BELLOW, Intent::Buff); }
-        return (JAW_WORM_CHOMP, Intent::Attack(11));
+    if first_move { return chomp; }
+    // A disallowed repeat consumes one probability-based AI roll. Preserve the
+    // original float constants: rounding these changes subsequent seeded moves.
+    match roll {
+        0..=24 if last(JAW_WORM_CHOMP) => {
+            if ai_rng.random_bool_chance(0.5625) { bellow } else { thrash }
+        }
+        0..=24 => chomp,
+        25..=54 if last_two(JAW_WORM_THRASH) => {
+            if ai_rng.random_bool_chance(0.357) { chomp } else { bellow }
+        }
+        25..=54 => thrash,
+        _ if last(JAW_WORM_BELLOW) => {
+            if ai_rng.random_bool_chance(0.416) { chomp } else { thrash }
+        }
+        _ => bellow,
     }
-    if roll < 55 {
-        if last_two(JAW_WORM_THRASH) { return (JAW_WORM_BELLOW, Intent::Buff); }
-        return (JAW_WORM_THRASH, Intent::AttackDefend(7));
-    }
-    if last(JAW_WORM_BELLOW) { return (JAW_WORM_CHOMP, Intent::Attack(11)); }
-    (JAW_WORM_BELLOW, Intent::Buff)
 }
 
 fn jaw_worm_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
@@ -493,8 +501,9 @@ fn jaw_worm_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
         }
         JAW_WORM_BELLOW => {
-            enemy.creature.apply_power(PowerId::Strength, 3);
-            enemy.creature.add_block(6);
+            let asc = enemy.ascension;
+            enemy.creature.apply_power(PowerId::Strength, if asc >= 17 { 5 } else if asc >= 2 { 4 } else { 3 });
+            enemy.creature.add_block(if asc >= 17 { 9 } else { 6 });
         }
         JAW_WORM_THRASH => {
             let dmg = enemy.attack_damage(player);
@@ -1137,6 +1146,57 @@ mod slime_ai_tests {
                 assert_eq!(ai.counter, expected_rng.counter);
                 assert_eq!(ai.random_int(99), expected_rng.random_int(99));
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod jaw_worm_ai_tests {
+    use super::*;
+
+    // Source-guided threshold checks complement the executed turn fixtures.
+    #[test]
+    fn opening_and_unrestricted_ranges_do_not_use_a_fallback_roll() {
+        for asc in [0, 1, 2, 16, 17, 20] {
+            for roll in 0..100 {
+                let mut rng = Rng::new(42);
+                let (opening, intent) = jaw_worm_get_move(roll, &[], true, asc, &mut rng);
+                assert_eq!(opening, JAW_WORM_CHOMP);
+                assert!(matches!(intent, Intent::Attack(n) if n == if asc >= 2 { 12 } else { 11 }));
+                // Empty history allows all three primary branches. A single
+                // Thrash also permits another Thrash; two are required to reroll.
+                for history in [vec![], vec![JAW_WORM_THRASH]] {
+                    let (next, _) = jaw_worm_get_move(roll, &history, false, asc, &mut rng);
+                    let expected = if roll < 25 { JAW_WORM_CHOMP }
+                        else if roll < 55 { JAW_WORM_THRASH } else { JAW_WORM_BELLOW };
+                    assert_eq!(next, expected, "A{asc} roll={roll} history={history:?}");
+                }
+                assert_eq!(rng.counter, 0);
+            }
+        }
+    }
+
+    #[test]
+    fn repeat_fallbacks_use_original_float_probabilities_and_one_rng_draw() {
+        // Supplied primary rolls isolate each fallback. The RNG primitive is
+        // independently checked against Java; full scheduling has JAR fixtures.
+        for (roll, history, chance, yes, no) in [
+            (24, vec![JAW_WORM_CHOMP], 0.5625, JAW_WORM_BELLOW, JAW_WORM_THRASH),
+            (54, vec![JAW_WORM_THRASH, JAW_WORM_THRASH], 0.357, JAW_WORM_CHOMP, JAW_WORM_BELLOW),
+            (55, vec![JAW_WORM_BELLOW], 0.416, JAW_WORM_CHOMP, JAW_WORM_THRASH),
+        ] {
+            let mut outcomes = [false; 2];
+            for seed in 0..20_000 {
+                let mut rng = Rng::new(seed);
+                let mut expected = rng.copy();
+                let choose_yes = expected.random_float() < chance;
+                outcomes[usize::from(choose_yes)] = true;
+                let (next, _) = jaw_worm_get_move(roll, &history, false, 0, &mut rng);
+                assert_eq!(next, if choose_yes { yes } else { no }, "seed={seed} history={history:?}");
+                assert_eq!(rng.counter, 1);
+                assert_eq!(rng.random_long(), expected.random_long(), "fallback must preserve RNG state");
+            }
+            assert_eq!(outcomes, [true, true]);
         }
     }
 }

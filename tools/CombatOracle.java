@@ -118,7 +118,7 @@ public class CombatOracle {
         set(CardCrawlGame.sound,com.megacrit.cardcrawl.audio.SoundMaster.class,"map",new HashMap<>());
     }
     static Ironclad player;
-    static Cultist monster;
+    static AbstractMonster monster;
     static AbstractGameAction current;
     static String scenario;
     static int step;
@@ -157,7 +157,8 @@ public class CombatOracle {
         scenario=row[1];
         AbstractDungeon.fadeColor=Color.BLACK.cpy();
         step=0;
-        turns=row.length==11;
+        if(row.length<10||row.length>12)throw new IllegalArgumentException("invalid case width");
+        turns=row.length>=11;
         AbstractDungeon.ascensionLevel=turns?Integer.parseInt(row[10]):0;
         GameActionManager.turn=1;
         current=null;
@@ -199,11 +200,29 @@ public class CombatOracle {
             new com.esotericsoftware.spine.AnimationStateData(skeleton));
         AbstractDungeon.player=player;
         AbstractDungeon.overlayMenu=new OverlayMenu(player);
-        monster=alloc(Cultist.class);
+        boolean jaw=row.length==12&&row[11].equals("JawWorm");
+        if(row.length==12&&!jaw)throw new IllegalArgumentException("unsupported enemy "+row[11]);
+        monster=jaw?alloc(JawWorm.class):alloc(Cultist.class);
         init(monster);
         monster.currentHealth=monster.maxHealth=200;
         monster.tint=new TintEffect();
-        monster.damage.add(new DamageInfo(monster,6));
+        if(jaw){
+            int asc=AbstractDungeon.ascensionLevel;
+            set(monster,JawWorm.class,"firstMove",true);
+            set(monster,JawWorm.class,"chompDmg",asc>=2?12:11);
+            set(monster,JawWorm.class,"thrashDmg",7);
+            set(monster,JawWorm.class,"thrashBlock",5);
+            set(monster,JawWorm.class,"bellowStr",asc>=17?5:asc>=2?4:3);
+            set(monster,JawWorm.class,"bellowBlock",asc>=17?9:6);
+            monster.damage.add(new DamageInfo(monster,asc>=2?12:11));
+            monster.damage.add(new DamageInfo(monster,7));
+            com.esotericsoftware.spine.SkeletonData jawSkeleton=new com.esotericsoftware.spine.SkeletonData();
+            for(String name:List.of("idle","chomp","tailslam"))jawSkeleton.getAnimations().add(
+                new com.esotericsoftware.spine.Animation(name,new com.badlogic.gdx.utils.Array<>(),0));
+            monster.state=new com.esotericsoftware.spine.AnimationState(
+                new com.esotericsoftware.spine.AnimationStateData(jawSkeleton));
+            CardCrawlGame.screenShake=new ScreenShake();
+        }else monster.damage.add(new DamageInfo(monster,6));
         set(monster,AbstractMonster.class,"move",new EnemyMoveInfo((byte)1,AbstractMonster.Intent.ATTACK,6,1,false));
         monster.intent=AbstractMonster.Intent.ATTACK;
         MonsterRoom room=alloc(MonsterRoom.class);
@@ -214,8 +233,10 @@ public class CombatOracle {
         node.room=room;
         AbstractDungeon.currMapNode=node;
         if(turns){
-            set(monster,Cultist.class,"firstMove",true);
-            set(monster,Cultist.class,"ritualAmount",AbstractDungeon.ascensionLevel>=2?4:3);
+            if(!jaw){
+                set(monster,Cultist.class,"firstMove",true);
+                set(monster,Cultist.class,"ritualAmount",AbstractDungeon.ascensionLevel>=2?4:3);
+            }
             monster.rollMove();
             monster.createIntent();
         }
@@ -307,6 +328,12 @@ public class CombatOracle {
         return out.isEmpty()?"-":String.join(",",out);
     }
     static String moveName(){
+        if(monster instanceof JawWorm)return switch(monster.nextMove){
+            case 1 -> "chomp";
+            case 2 -> "bellow";
+            case 3 -> "thrash";
+            default -> throw new IllegalStateException("unexpected Jaw Worm move "+monster.nextMove);
+        };
         return switch(monster.nextMove){
             case 3 -> "incantation";
             case 1 -> "dark_strike";
@@ -326,7 +353,7 @@ public class CombatOracle {
         ""+monster.currentHealth,""+monster.currentBlock,powers(player),powers(monster),""+AbstractDungeon.cardRandomRng.counter,""+AbstractDungeon.shuffleRng.counter,
         (phase.equals("play")?"-":cards(options(),false)))
         +(turns?"\t"+GameActionManager.turn+"\t"+moveName()
-            +"\t"+monster.getIntentDmg()+"\t"+AbstractDungeon.aiRng.counter:""));
+            +"\t"+(monster.getIntentBaseDmg()<0?0:monster.getIntentDmg())+"\t"+AbstractDungeon.aiRng.counter:""));
     }
     public static void main(String[] args)throws Exception {
         initialize();

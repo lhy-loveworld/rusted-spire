@@ -94,16 +94,20 @@ is required to run the committed fixture tests.
 
 ## Executed original-bytecode action and turn traces
 
-[COMBAT_TRACES.md](COMBAT_TRACES.md) documents 90 matching snapshots: 44 across 15
-card-action scenarios and 46 across eight controlled Cultist turn scenarios.
+[COMBAT_TRACES.md](COMBAT_TRACES.md) documents 290 matching snapshots: 44 across 15
+card-action scenarios, 46 across eight Cultist turn scenarios, and 200 across 25
+Act 1 Jaw Worm scenarios.
 The driver preserves original card/action/damage methods and runs the original
 action manager for turn transitions, while supplying controlled actors and mock
-graphics. It does not establish constructor, full-fight or other-enemy parity.
+graphics. It does not establish constructor, full-fight or untested-enemy parity.
 
 The comparison found and fixed early Curl Up block, Wound/Dazed cost encoding,
-reversed end-turn discard order and too little Cultist Ritual at Ascension 17+.
+reversed end-turn discard order, too little Cultist Ritual at Ascension 17+,
+and Jaw Worm's missing fallback RNG and ascension bonuses.
 Turn coverage includes power timing, energy/block reset, subsequent hands, intents
-and AI RNG counters. Both suites regenerate identically; 102 Rust tests and 29
+and AI RNG counters. Jaw Worm traces exercise both outcomes of all three random
+fallbacks and verify unblocked damage at ascension boundaries. All three suites
+regenerate identically; 106 Rust tests and 30
 Python/Gym tests pass. Fixtures include provenance hashes and run without the JAR
 in CI. Interface v5 dimensions are unchanged, but seeded trajectories change;
 existing policies and benchmark results need reevaluation.

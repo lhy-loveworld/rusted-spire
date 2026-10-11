@@ -1,0 +1,201 @@
+# Controlled Act 1 Jaw Worm; final fields are ascension and enemy.
+case	jaw_seed_0	0	Strike,Defend,Dazed	Bash,Strike,Defend,Anger,ShrugItOff	Wound	Metallicize:30	-	0	0	0	JawWorm
+end
+end
+end
+end
+end
+end
+end
+end
+case	jaw_seed_1	1	Strike,Defend,Dazed	Bash,Strike,Defend,Anger,ShrugItOff	Wound	Metallicize:30	-	0	0	0	JawWorm
+end
+end
+end
+end
+end
+end
+end
+end
+case	jaw_seed_2	2	Strike,Defend,Dazed	Bash,Strike,Defend,Anger,ShrugItOff	Wound	Metallicize:30	-	0	0	0	JawWorm
+end
+end
+end
+end
+end
+end
+end
+end
+case	jaw_seed_3	3	Strike,Defend,Dazed	Bash,Strike,Defend,Anger,ShrugItOff	Wound	Metallicize:30	-	0	0	0	JawWorm
+end
+end
+end
+end
+end
+end
+end
+end
+case	jaw_seed_4	4	Strike,Defend,Dazed	Bash,Strike,Defend,Anger,ShrugItOff	Wound	Metallicize:30	-	0	0	0	JawWorm
+end
+end
+end
+end
+end
+end
+end
+end
+case	jaw_seed_5	5	Strike,Defend,Dazed	Bash,Strike,Defend,Anger,ShrugItOff	Wound	Metallicize:30	-	0	0	0	JawWorm
+end
+end
+end
+end
+end
+end
+end
+end
+case	jaw_seed_6	6	Strike,Defend,Dazed	Bash,Strike,Defend,Anger,ShrugItOff	Wound	Metallicize:30	-	0	0	0	JawWorm
+end
+end
+end
+end
+end
+end
+end
+end
+case	jaw_seed_7	7	Strike,Defend,Dazed	Bash,Strike,Defend,Anger,ShrugItOff	Wound	Metallicize:30	-	0	0	0	JawWorm
+end
+end
+end
+end
+end
+end
+end
+end
+case	jaw_seed_8	8	Strike,Defend,Dazed	Bash,Strike,Defend,Anger,ShrugItOff	Wound	Metallicize:30	-	0	0	0	JawWorm
+end
+end
+end
+end
+end
+end
+end
+end
+case	jaw_seed_9	9	Strike,Defend,Dazed	Bash,Strike,Defend,Anger,ShrugItOff	Wound	Metallicize:30	-	0	0	0	JawWorm
+end
+end
+end
+end
+end
+end
+end
+end
+case	jaw_seed_10	10	Strike,Defend,Dazed	Bash,Strike,Defend,Anger,ShrugItOff	Wound	Metallicize:30	-	0	0	0	JawWorm
+end
+end
+end
+end
+end
+end
+end
+end
+case	jaw_seed_11	11	Strike,Defend,Dazed	Bash,Strike,Defend,Anger,ShrugItOff	Wound	Metallicize:30	-	0	0	0	JawWorm
+end
+end
+end
+end
+end
+end
+end
+end
+case	jaw_a1	42	Strike,Defend	Bash,Strike,Defend,Anger,ShrugItOff	Wound	Metallicize:30	-	0	0	1	JawWorm
+end
+end
+end
+end
+end
+end
+end
+end
+case	jaw_a2	42	Strike,Defend	Bash,Strike,Defend,Anger,ShrugItOff	Wound	Metallicize:30	-	0	0	2	JawWorm
+end
+end
+end
+end
+end
+end
+end
+end
+case	jaw_a16	42	Strike,Defend	Bash,Strike,Defend,Anger,ShrugItOff	Wound	Metallicize:30	-	0	0	16	JawWorm
+end
+end
+end
+end
+end
+end
+end
+end
+case	jaw_a17	42	Strike,Defend	Bash,Strike,Defend,Anger,ShrugItOff	Wound	Metallicize:30	-	0	0	17	JawWorm
+end
+end
+end
+end
+end
+end
+end
+end
+case	jaw_a20	42	Strike,Defend	Bash,Strike,Defend,Anger,ShrugItOff	Wound	Metallicize:30	-	0	0	20	JawWorm
+end
+end
+end
+end
+end
+end
+end
+end
+case	jaw_seed_12	12	Strike,Defend,Dazed	Bash,Strike,Defend,Anger,ShrugItOff	Wound	Metallicize:30	-	0	0	0	JawWorm
+end
+end
+end
+end
+end
+end
+end
+end
+case	jaw_damage_a0	42	Strike,Defend	Bash,Strike,Defend,Anger,ShrugItOff	Wound	-	-	0	0	0	JawWorm
+end
+end
+end
+end
+case	jaw_damage_a1	42	Strike,Defend	Bash,Strike,Defend,Anger,ShrugItOff	Wound	-	-	0	0	1	JawWorm
+end
+end
+end
+end
+case	jaw_damage_a2	42	Strike,Defend	Bash,Strike,Defend,Anger,ShrugItOff	Wound	-	-	0	0	2	JawWorm
+end
+end
+end
+end
+case	jaw_damage_a16	42	Strike,Defend	Bash,Strike,Defend,Anger,ShrugItOff	Wound	-	-	0	0	16	JawWorm
+end
+end
+end
+end
+case	jaw_damage_a17	42	Strike,Defend	Bash,Strike,Defend,Anger,ShrugItOff	Wound	-	-	0	0	17	JawWorm
+end
+end
+end
+end
+case	jaw_damage_a20	42	Strike,Defend	Bash,Strike,Defend,Anger,ShrugItOff	Wound	-	-	0	0	20	JawWorm
+end
+end
+end
+end
+case	jaw_cards_and_debuffs	1	Strike,Defend,Bash,TwinStrike	Bash,Strike,Defend,Anger,ShrugItOff	Wound	Weak:2,Frail:2,Vulnerable:2	Weak:2,Vulnerable:2	0	0	17	JawWorm
+play	0
+play	0
+end
+play	0
+play	1
+end
+end

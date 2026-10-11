@@ -70,6 +70,11 @@ fn controlled_turns_match_original_jar_snapshots() {
     compare(include_str!("fixtures/java_turns.tsv"), include_str!("fixtures/turn_scenarios.tsv"), true);
 }
 
+#[test]
+fn jaw_worm_turns_match_original_jar_snapshots() {
+    compare(include_str!("fixtures/java_jaw_worm.tsv"), include_str!("fixtures/jaw_worm_scenarios.tsv"), true);
+}
+
 fn compare(expected_text: &'static str, directives_text: &'static str, turns: bool) {
     let rows = |text: &'static str| text.lines().filter(|l| !l.starts_with('#') && !l.is_empty());
     let expected: Vec<_> = rows(expected_text).collect();
@@ -88,7 +93,10 @@ fn compare(expected_text: &'static str, directives_text: &'static str, turns: bo
             "case" => {
                 case = row[1]; index = 0;
                 let seed = row[2].parse().unwrap();
-                let mut s = CombatState::new(vec![], &[EnemyId::Cultist], seed, if turns { row[10].parse().unwrap() } else { 0 }, 80);
+                let enemy_id = if row.len() == 12 {
+                    assert_eq!(row[11], "JawWorm"); EnemyId::JawWorm
+                } else { EnemyId::Cultist };
+                let mut s = CombatState::new(vec![], &[enemy_id], seed, if turns { row[10].parse().unwrap() } else { 0 }, 80);
                 // Controlled setup bypasses both games' constructors/opening draw.
                 s.rng = RngBundle::new(seed);
                 if turns { s.enemies[0].roll_move(&mut s.rng.ai, true); }
@@ -113,8 +121,13 @@ fn compare(expected_text: &'static str, directives_text: &'static str, turns: bo
         let mut actual = snapshot(s, case, index);
         if turns {
             let enemy = &s.enemies[0];
-            let damage = match enemy.intent { rusted_spire::enemy::Intent::Attack(n) => n, _ => 0 };
-            actual.extend([s.turn.to_string(), match enemy.next_move { 3 => "incantation", 1 => "dark_strike", other => panic!("unexpected Cultist move {other}") }.into(),
+            let damage = match enemy.intent { rusted_spire::enemy::Intent::Attack(n) | rusted_spire::enemy::Intent::AttackDefend(n) => n, _ => 0 };
+            let name = match (enemy.id, enemy.next_move) {
+                (EnemyId::Cultist, 3) => "incantation", (EnemyId::Cultist, 1) => "dark_strike",
+                (EnemyId::JawWorm, 1) => "chomp", (EnemyId::JawWorm, 2) => "bellow", (EnemyId::JawWorm, 3) => "thrash",
+                other => panic!("unexpected fixture enemy/move {other:?}"),
+            };
+            actual.extend([s.turn.to_string(), name.into(),
                 damage.to_string(), s.rng.ai.counter.to_string()]);
         }
         let expected: Vec<_> = expected.split('\t').collect();
@@ -124,4 +137,37 @@ fn compare(expected_text: &'static str, directives_text: &'static str, turns: bo
         }
     }
     assert!(mismatches.is_empty(), "original bytecode divergences:\n{}", mismatches.join("\n"));
+}
+
+#[test]
+fn jaw_worm_reference_covers_all_random_fallback_outcomes() {
+    use std::collections::BTreeSet;
+    let mut observed = BTreeSet::new();
+    let mut history = Vec::new();
+    let mut previous: Option<Vec<&str>> = None;
+    for line in include_str!("fixtures/java_jaw_worm.tsv").lines().filter(|l| !l.starts_with('#')) {
+        let row: Vec<_> = line.split('\t').collect();
+        if row[1] == "0" { history.clear(); }
+        if let Some(prev) = &previous {
+            // Only end-turn snapshots advance the turn; intervening card plays
+            // must not count as another enemy action or consume AI randomness.
+            if prev[0] == row[0] && prev[17] != row[17] {
+                history.push(prev[18]);
+                let rolls = row[20].parse::<u32>().unwrap() - prev[20].parse::<u32>().unwrap();
+                assert!((1..=2).contains(&rolls));
+                if rolls == 2 {
+                    if prev[18] == "thrash" { assert!(history.ends_with(&["thrash", "thrash"])); }
+                    observed.insert((prev[18], row[18]));
+                }
+                assert!(!(prev[18] == row[18] && ["chomp", "bellow"].contains(&row[18])));
+                assert!(!(row[18] == "thrash" && history.ends_with(&["thrash", "thrash"])));
+            }
+        }
+        previous = Some(row);
+    }
+    assert_eq!(observed, BTreeSet::from([
+        ("chomp", "bellow"), ("chomp", "thrash"),
+        ("thrash", "chomp"), ("thrash", "bellow"),
+        ("bellow", "chomp"), ("bellow", "thrash"),
+    ]));
 }
