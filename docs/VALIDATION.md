@@ -94,20 +94,25 @@ is required to run the committed fixture tests.
 
 ## Executed original-bytecode action and turn traces
 
-[COMBAT_TRACES.md](COMBAT_TRACES.md) documents 290 matching snapshots: 44 across 15
-card-action scenarios, 46 across eight Cultist turn scenarios, and 200 across 25
-Act 1 Jaw Worm scenarios.
+[COMBAT_TRACES.md](COMBAT_TRACES.md) documents 530 matching snapshots: 54 across 19
+card-action scenarios, 46 across eight Cultist turn scenarios, 200 across 25
+Act 1 Jaw Worm scenarios, and 230 across 85 encounter-start scenarios.
 The driver preserves original card/action/damage methods and runs the original
 action manager for turn transitions, while supplying controlled actors and mock
-graphics. It does not establish constructor, full-fight or untested-enemy parity.
+graphics. Encounter cases execute real Cultist/Jaw Worm/Louse constructors,
+original battle preparation, and opening draws. The player and room remain mocked;
+full-fight and untested-enemy parity are not established.
 
 The comparison found and fixed early Curl Up block, Wound/Dazed cost encoding,
 reversed end-turn discard order, too little Cultist Ritual at Ascension 17+,
-and Jaw Worm's missing fallback RNG and ascension bonuses.
+Jaw Worm's missing fallback RNG and ascension bonuses, and skipped empty shuffles
+after overdraw.
 Turn coverage includes power timing, energy/block reset, subsequent hands, intents
 and AI RNG counters. Jaw Worm traces exercise both outcomes of all three random
-fallbacks and verify unblocked damage at ascension boundaries. All three suites
-regenerate identically; 106 Rust tests and 30
+fallbacks and verify unblocked damage at ascension boundaries. Encounter cases
+check HP/AI/shuffle RNG, initial moves, opening hands and following
+turns; two-Louse cases check construction and Curl Up order. All four suites
+regenerate identically; 107 Rust tests and 31
 Python/Gym tests pass. Fixtures include provenance hashes and run without the JAR
 in CI. Interface v5 dimensions are unchanged, but seeded trajectories change;
 existing policies and benchmark results need reevaluation.

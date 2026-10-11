@@ -44,14 +44,16 @@ def main():
     rows = [line.removeprefix("TRACE\t") for line in result.stdout.splitlines() if line.startswith("TRACE\t")]
     expected = sum(bool(line.strip()) and not line.startswith("#") for line in scenarios.read_text().splitlines())
     width = len(rows[0].split("\t")) if rows else 0
-    if len(rows) != expected or width not in (17, 21) or any(len(row.split("\t")) != width for row in rows):
+    if len(rows) != expected or width not in (17, 21, 24) or any(len(row.split("\t")) != width for row in rows):
         raise RuntimeError(f"invalid oracle output: {len(rows)} rows, expected {expected}")
     version = next(line.removeprefix("VERSION\t") for line in result.stdout.splitlines() if line.startswith("VERSION\t"))
-    extra = " turn enemy_move intent_damage ai_rng" if width == 21 else ""
+    extra = " turn enemy_move intent_damage ai_rng" if width >= 21 else ""
+    if width == 24:
+        extra += " hp_rng enemy_max_hp enemy_damage_roll"
     data = "# case step phase hp block energy hand draw discard exhaust enemy_hp enemy_block player_powers enemy_powers card_rng shuffle_rng choices" + extra + "\n" + "\n".join(rows) + "\n"
     jdk = subprocess.run([executable("java"), "-version"], check=True, capture_output=True, text=True)
     metadata = {
-        "scope": "Original JAR bytecode for card use, queued actions, damage, powers, pile movement and choices; controlled actor setup and queue driver, mock rendering. Turn scenarios additionally execute the original action manager, room end-turn hooks and controlled Cultist or Act 1 Jaw Worm AI. Not full game-loop or constructor parity.",
+        "scope": "Original JAR bytecode for card use, queued actions, damage, powers, pile movement and choices; controlled actor setup and queue driver, mock rendering. Turn scenarios additionally execute the original action manager, room end-turn hooks and controlled Cultist or Act 1 Jaw Worm AI. Encounter scenarios execute real Cultist/Jaw Worm/Louse constructors, MonsterGroup.init, player.preBattlePrep and the room battle-start branch; player/room construction remains mocked. Not full-game parity.",
         "game_version": version, "jar_sha256": sha256(jar),
         "java_version": (jdk.stdout + jdk.stderr).strip(),
         "harness_sha256": sha256(harness), "scenarios_sha256": sha256(scenarios),

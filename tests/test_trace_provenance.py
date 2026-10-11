@@ -17,6 +17,9 @@ class TraceProvenanceTests(unittest.TestCase):
     def test_jaw_worm_provenance(self):
         self.check_provenance("java_jaw_worm", "jaw_worm_scenarios")
 
+    def test_encounter_provenance(self):
+        self.check_provenance("java_encounters", "encounter_scenarios")
+
     def check_provenance(self, fixture, scenarios):
         metadata = json.loads((ROOT / f"tests/fixtures/{fixture}.json").read_text())
         for key, name in [

@@ -65,7 +65,7 @@ python -m unittest discover -s tests -v
 
 The Python tests cover reset determinism, invalid actions, terminal states, and
 100 seeded random-policy episodes. They do not establish full game parity. The [original-bytecode combat
-traces](docs/COMBAT_TRACES.md) compare 290 recorded card-action, Cultist-turn and Jaw Worm-turn
+traces](docs/COMBAT_TRACES.md) compare 530 recorded card-action, enemy-turn and encounter-start
 snapshots from the installed game against Rust, with explicit scope and provenance.
 
 For training, install the optional dependencies into the same environment:

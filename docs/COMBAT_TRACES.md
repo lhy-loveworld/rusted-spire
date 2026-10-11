@@ -1,15 +1,16 @@
 # Executed original-bytecode combat traces
 
-The simulator now matches **290 decision-boundary snapshots** generated from the
-locally installed original game JAR: 44 across 15 card-action scenarios, 46
-across eight controlled Cultist turn scenarios, and 200 across 25 Act 1 Jaw Worm
-scenarios.
+The simulator now matches **530 decision-boundary snapshots** generated from the
+locally installed original game JAR: 54 across 19 card-action scenarios, 46
+across eight controlled Cultist turn scenarios, 200 across 25 Act 1 Jaw Worm
+scenarios, and 230 across 85 encounter-start scenarios.
 These expectations are produced by executing the shipped classes, not by
 transcribing the decompiled methods or recording Rust's own output.
 
 This is a controlled action/turn comparison, not a complete fight, full game-loop
-replay, or proof of whole-game parity. Constructor RNG, opening draws, other
-enemies, victory/death and run progression remain outside this suite.
+replay, or proof of whole-game parity. Selected monster constructors and opening
+draws are now executed, but untested enemies, victory/death and run progression
+remain outside this suite.
 
 ## Reference and execution boundary
 
@@ -19,7 +20,8 @@ enemies, victory/death and run progression remain outside this suite.
   installation's JAR, using its bundled Linux libGDX native library.
 - [java_combat.json](../tests/fixtures/java_combat.json) and
   [java_turns.json](../tests/fixtures/java_turns.json), plus
-  [java_jaw_worm.json](../tests/fixtures/java_jaw_worm.json), record the JVM version,
+  [java_jaw_worm.json](../tests/fixtures/java_jaw_worm.json) and
+  [java_encounters.json](../tests/fixtures/java_encounters.json), record the JVM version,
   JAR hash, driver/scenario/fixture hashes, and action classes entered at each
   boundary. No game code, graphics, JARs or save files are checked in.
 
@@ -34,8 +36,9 @@ run through the full application update loop.
 
 Graphics/audio/input are mocked. Fonts and textures are placeholders, tutorial
 prompts are disabled, and preferences are in-memory. Character, target and room
-constructors are bypassed with Java `Unsafe`, then explicitly initialized. Each
-scenario starts with an Ironclad at 80 HP and 3 energy and a Cultist or Jaw Worm
+constructors are bypassed with Java `Unsafe` in controlled scenarios, then
+explicitly initialized. Each controlled scenario starts with an Ironclad at 80 HP
+and 3 energy and a Cultist or Jaw Worm
 target at 200 HP. Card-only scenarios keep the target stationary. Listed powers,
 block and piles are injected into both runtimes;
 the target can carry synthetic powers such as Curl Up for focused interaction
@@ -54,10 +57,21 @@ end-turn card queue drains, the harness makes the same handoff to
 turn number advances, all queues drain, and the end-turn button is enabled.
 Empty Spine hit/idle animations satisfy the original Ironclad damage method's
 visual dependency; Jaw Worm also receives empty idle/chomp/tailslam animations
-and a screen-shake helper. No damage or AI method is replaced. This still does not
-exercise actor constructors or the full room/input/render loop.
+and a screen-shake helper. No damage or AI method is replaced. These controlled
+turn cases do not exercise actor constructors or the full room/input/render loop.
 
-This setup deliberately isolates action semantics. It must not be described as
+Encounter scenarios keep the mock Ironclad/room but execute real Cultist,
+Act 1 Jaw Worm, and red/green Louse constructors, including their bundled texture
+and animation loading. No enemy HP, damage, powers, or AI fields are assigned by
+the harness in this mode. It constructs all listed monsters, calls
+`MonsterGroup.init`, then runs `AbstractPlayer.preBattlePrep` with the supplied
+ordered master deck. The original room battle-start branch queues energy and
+opening-draw actions. The driver drains them and captures the first player turn.
+Inputs are effective combat seeds, not run seeds requiring a floor offset.
+Relics, potions, innate/bottled cards, deck generation and automatic Ascender's
+Bane insertion are outside this explicit-deck test setup.
+
+This setup deliberately isolates combat semantics. It must not be described as
 running an unmodified full game session. The original combat methods are executed,
 but their environment and the outer scheduler are supplied by the harness.
 
@@ -97,6 +111,17 @@ A fixture-coverage regression requires all six fallback outcomes to remain
 present. Separate source-guided unit tests cover every primary roll and exact
 float fallback probabilities/RNG state; these are not additional JAR snapshots.
 
+Encounter coverage includes six seeds (including zero and the largest signed
+64-bit seed), Ascensions 0/2/6/7/17/20, an ordered starter deck, an upgraded
+seven-card deck, a three-card deck and an empty deck. Seventy-two Cultist/Jaw Worm
+cases compare initialization followed by two enemy turns; the empty-deck case
+continues one turn. Twelve two-Louse cases compare initialization only, checking
+both constructors' HP/damage rolls before both Curl Up rolls. Encounter snapshots
+add the HP RNG counter, max HP, and variable damage roll (Louse bite damage;
+zero for enemies without a variable roll). Enemy fields are separated by `|`
+in formation order. Louse turn/AI parity is not claimed by these setup checks.
+Additional action cases check Warcry/Pommel overdraw, exact draw and hand limits.
+
 ## Divergences found and fixed
 
 1. **Curl Up resolved too early.** Against a target with Curl Up 9, Twin Strike
@@ -124,6 +149,14 @@ float fallback probabilities/RNG state; these are not additional JAR snapshots.
    (11 below A2). Bellow grants 3 Strength/6 block below A2, 4/6 at A2–16, and
    5/9 at A17+. Thrash remains 7 damage/5 block.
 
+7. **Overdraw omitted an empty shuffle.** When a draw request exceeds the cards
+   remaining, the original queues a shuffle even after drawing the last available
+   card. That empty shuffle consumes RNG. Rust previously stopped immediately,
+   so short-deck opening hands matched but later hands diverged. Drawing now
+   follows the original split-draw/shuffle sequence. Starting with both piles
+   empty, drawing exactly the available count, and stopping at the hand limit
+   still avoid an extra shuffle.
+
 Interface dimensions remain v5 (242 observations / 73 actions). These corrections
 change behavior, seeded trajectories and status observations, so existing v5
 policies need reevaluation.
@@ -142,6 +175,9 @@ expressions. The JAR must provide the libGDX headless classes/native library.
 .venv/bin/python tools/generate_combat_fixtures.py \
   --jar /path/to/SlayTheSpire/desktop-1.0.jar --java-home /path/to/jdk \
   --scenarios tests/fixtures/jaw_worm_scenarios.tsv --output tests/fixtures/java_jaw_worm.tsv
+.venv/bin/python tools/generate_combat_fixtures.py \
+  --jar /path/to/SlayTheSpire/desktop-1.0.jar --java-home /path/to/jdk \
+  --scenarios tests/fixtures/encounter_scenarios.tsv --output tests/fixtures/java_encounters.tsv
 cargo test --locked --test java_combat_traces
 .venv/bin/python -m unittest discover -s tests -v
 ```
@@ -155,11 +191,10 @@ Inspect changed hashes and trace values before accepting a new reference build.
 Normal tests/CI only consume the committed numeric/card-state fixtures. The Rust
 test reports the scenario, step and differing field; the Python provenance test
 detects stale driver/scenario/fixture hashes. A second independent Java execution
-produced identical snapshots and metadata for all three suites. All 106 Rust tests and
-30 Python/Gym tests pass.
+produced identical snapshots and metadata for all four suites. All 107 Rust tests and
+31 Python/Gym tests pass.
 
-The next extension should validate actual encounter initialization, including
-constructor HP/AI RNG and opening draws, then longer seeded fights through
-victory or defeat. This suite
+The next extension should follow initialized encounters through scripted card
+plays to victory or defeat, validating lethal-hit cleanup and terminal state. This suite
 provides executed combat references alongside the RNG primitive fixtures and
 source audits; it does not establish encounter-wide parity.

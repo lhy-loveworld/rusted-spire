@@ -43,3 +43,13 @@ headbutt_curl_choice	0	play	80	0	3	Headbutt:1,Strike:1	-	Defend:1,Dazed:-2	-	200
 headbutt_curl_choice	1	topdeck_discard	80	0	2	Strike:1	-	Defend:1,Dazed:-2	-	191	0	-	CurlUp:9	0	0	Defend:1,Dazed:-2
 headbutt_curl_choice	2	play	80	0	2	Strike:1	Dazed:-2	Defend:1,Headbutt:1	-	191	9	-	-	0	0	-
 headbutt_curl_choice	3	play	80	0	1	-	Dazed:-2	Defend:1,Headbutt:1,Strike:1	-	191	3	-	-	0	0	-
+warcry_discard_overdraw	0	play	80	0	3	Warcry+:0,Defend:1	-	Strike:1	-	200	0	-	-	0	0	-
+warcry_discard_overdraw	1	topdeck_hand	80	0	3	Defend:1,Strike:1	-	-	-	200	0	-	-	0	2	Defend:1,Strike:1
+warcry_discard_overdraw	2	play	80	0	3	Strike:1	Defend:1	-	Warcry+:0	200	0	-	-	0	2	-
+pommel_overdraw	0	play	80	0	3	PommelStrike+:1	Strike:1	-	-	200	0	-	-	0	0	-
+pommel_overdraw	1	play	80	0	2	Strike:1	-	PommelStrike+:1	-	190	0	-	-	0	1	-
+pommel_exact_draw	0	play	80	0	3	PommelStrike:1	Strike:1	-	-	200	0	-	-	0	0	-
+pommel_exact_draw	1	play	80	0	2	Strike:1	-	PommelStrike:1	-	191	0	-	-	0	0	-
+warcry_hand_limit	0	play	80	0	3	Warcry+:0,Defend:1,Defend:1,Defend:1,Defend:1,Defend:1,Defend:1,Defend:1,Defend:1,Defend:1	Strike:1	-	-	200	0	-	-	0	0	-
+warcry_hand_limit	1	topdeck_hand	80	0	3	Defend:1,Defend:1,Defend:1,Defend:1,Defend:1,Defend:1,Defend:1,Defend:1,Defend:1,Strike:1	-	-	-	200	0	-	-	0	0	Defend:1,Defend:1,Defend:1,Defend:1,Defend:1,Defend:1,Defend:1,Defend:1,Defend:1,Strike:1
+warcry_hand_limit	2	play	80	0	3	Defend:1,Defend:1,Defend:1,Defend:1,Defend:1,Defend:1,Defend:1,Defend:1,Strike:1	Defend:1	-	Warcry+:0	200	0	-	-	0	0	-

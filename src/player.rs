@@ -33,19 +33,19 @@ impl PlayerState {
 
     /// Draw `n` cards, shuffling discard into draw when draw pile runs out.
     pub fn draw(&mut self, n: usize, shuffle_rng: &mut Rng) {
-        for _ in 0..n {
-            if self.hand.len() >= MAX_HAND {
-                break;
-            }
-            if self.draw_pile.is_empty() {
-                if self.discard_pile.is_empty() {
-                    break;
-                }
-                self.draw_pile.append(&mut self.discard_pile);
-                shuffle(&mut self.draw_pile, shuffle_rng);
-            }
-            let card = self.draw_pile.remove(0);
-            self.hand.push(card);
+        let count = n.min(MAX_HAND.saturating_sub(self.hand.len()));
+        if count == 0 || (self.draw_pile.is_empty() && self.discard_pile.is_empty()) {
+            return;
+        }
+        let from_draw = count.min(self.draw_pile.len());
+        self.hand.extend(self.draw_pile.drain(..from_draw));
+        if count > from_draw {
+            // DrawCardAction queues a shuffle before the remaining draw, even
+            // if drawing the last available cards leaves an empty discard pile.
+            // EmptyDeckShuffleAction still consumes one shuffle RNG call.
+            self.draw_pile.append(&mut self.discard_pile);
+            shuffle(&mut self.draw_pile, shuffle_rng);
+            self.draw(count - from_draw, shuffle_rng);
         }
     }
 

@@ -42,9 +42,12 @@ The turn extension adds 46 matching snapshots across eight Cultist scenarios,
 using the original action manager. It fixed end-turn discard order and A17+
 Ritual. Jaw Worm now adds 200 snapshots across 25 scenarios, with all six random
 fallback outcomes covered. Fixed missing fallback rolls, Chomp ascension damage,
-and Bellow Strength/block scaling. Total: 290 snapshots, 106 Rust tests and 30
-Python/Gym tests. Next simulator priority: actual encounter initialization and
-opening draws, then seeded fights through victory/defeat before full-run expansion.
+and Bellow Strength/block scaling. Encounter setup now executes real Cultist/Jaw Worm/Louse constructors and original
+opening draws across 85 cases, exposing a missing empty-shuffle RNG call on
+overdraw. Corrected draw scheduling and added card-level boundary traces.
+Total: 530 snapshots, 107 Rust tests and 31 Python/Gym tests. Next simulator
+priority: scripted fights from initialization through victory/defeat, including
+lethal-hit cleanup, before full-run expansion.
 
 ---
 

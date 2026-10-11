@@ -44,3 +44,13 @@ case	headbutt_curl_choice	42	Headbutt,Strike	-	Defend,Dazed	-	CurlUp:9	0	0
 play	0
 choose	1
 play	0
+case	warcry_discard_overdraw	42	Warcry+,Defend	-	Strike	-	-	0	0
+play	0
+choose	0
+case	pommel_overdraw	42	PommelStrike+	Strike	-	-	-	0	0
+play	0
+case	pommel_exact_draw	42	PommelStrike	Strike	-	-	-	0	0
+play	0
+case	warcry_hand_limit	42	Warcry+,Defend,Defend,Defend,Defend,Defend,Defend,Defend,Defend,Defend	Strike	-	-	-	0	0
+play	0
+choose	0

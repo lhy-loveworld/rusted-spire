@@ -226,7 +226,7 @@ fn warcry_respects_full_hand_and_reshuffles_without_drawing_itself() {
     play(&mut s);
     assert_eq!(specs(&s.player.hand), ["Defend", "Strike"]);
     assert!(s.player.discard_pile.is_empty());
-    assert_eq!(s.rng.shuffle.counter, 2); // initial shuffle and reshuffle
+    assert_eq!(s.rng.shuffle.counter, 3); // initial, discard reshuffle, then empty overdraw shuffle
     step(&mut s, Action::SelectCard { option_idx: 0 });
     assert_eq!(specs(&s.player.exhaust_pile), ["Warcry+"]);
 }

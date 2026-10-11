@@ -97,6 +97,7 @@ public class CombatOracle {
         CardCrawlGame.languagePack=new LocalizedStrings();
         TipTracker.tips.put(TipTracker.SHUFFLE_TIP,true);
         TipTracker.tips.put(TipTracker.INTENT_TIP,true);
+        TipTracker.tips.put(TipTracker.COMBAT_TIP,true);
         com.badlogic.gdx.utils.GdxNativesLoader.load();
         Texture texture=new Texture(1,1,Pixmap.Format.RGBA8888);
         TextureAtlas atlas=new TextureAtlas(){
@@ -123,6 +124,7 @@ public class CombatOracle {
     static String scenario;
     static int step;
     static boolean turns;
+    static boolean encounter;
     static List<AbstractCard> logicalHand;
     static AbstractCard inUse;
     static List<String> actionLog = new ArrayList<>();
@@ -155,6 +157,7 @@ public class CombatOracle {
     }
     static void reset(String[] row)throws Exception {
         scenario=row[1];
+        encounter=false;
         AbstractDungeon.fadeColor=Color.BLACK.cpy();
         step=0;
         if(row.length<10||row.length>12)throw new IllegalArgumentException("invalid case width");
@@ -250,6 +253,40 @@ public class CombatOracle {
         monster.currentBlock=Integer.parseInt(row[9]);
         com.megacrit.cardcrawl.ui.panels.EnergyPanel.totalCount=3;
     }
+    static void encounter(String[] row)throws Exception {
+        if(row.length!=6)throw new IllegalArgumentException("invalid encounter width");
+        // Reuse only the mock player/room setup. No RNG is consumed by this
+        // empty controlled reset; the real monster constructor follows below.
+        reset(new String[]{"case",row[1],row[2],"-","-","-","-","-","0","0"});
+        encounter=true;
+        turns=true;
+        AbstractDungeon.ascensionLevel=Integer.parseInt(row[3]);
+        List<AbstractMonster> enemies=new ArrayList<>();
+        for(String name:row[4].split(","))enemies.add(switch(name){
+            case "Cultist" -> new Cultist(0,0,false);
+            case "JawWorm" -> new JawWorm(0,0,false);
+            case "LouseNormal" -> new LouseNormal(0,0);
+            case "LouseDefensive" -> new LouseDefensive(0,0);
+            default -> throw new IllegalArgumentException("unsupported encounter "+name);
+        });
+        monster=enemies.get(0);
+        AbstractRoom room=AbstractDungeon.getCurrRoom();
+        room.monsters=new MonsterGroup(enemies.toArray(new AbstractMonster[0]));
+        room.monsters.init();
+        player.masterHandSize=5;
+        pile(player.masterDeck,row[5],false);
+        player.preBattlePrep();
+        drain();
+        // Execute the room's original battle-start branch, then its queued
+        // energy/draw actions. The harness supplies the frame clock and stops
+        // before the normal player-input/render loop.
+        AbstractRoom.waitTimer=0.01f;
+        room.update();
+        drain();
+        room.monsters.showIntent();
+        if(!AbstractDungeon.overlayMenu.endTurnButton.enabled)
+            throw new IllegalStateException("opening hand did not enable controls");
+    }
     // Drive original update() methods in queue order, pausing for real selection
     // screens. This is an isolated action scheduler, not the full game update loop.
     static void drain() throws Exception {
@@ -327,7 +364,17 @@ public class CombatOracle {
         Collections.sort(out);
         return out.isEmpty()?"-":String.join(",",out);
     }
-    static String moveName(){
+    static String enemyFields(java.util.function.Function<AbstractMonster,String> field){
+        List<String> out=new ArrayList<>();
+        for(AbstractMonster enemy:AbstractDungeon.getMonsters().monsters)out.add(field.apply(enemy));
+        return String.join("|",out);
+    }
+    static String moveName(AbstractMonster monster){
+        if(monster instanceof LouseNormal||monster instanceof LouseDefensive)return switch(monster.nextMove){
+            case 3 -> "bite";
+            case 4 -> monster instanceof LouseNormal?"grow":"spit_web";
+            default -> throw new IllegalStateException("unexpected Louse move "+monster.nextMove);
+        };
         if(monster instanceof JawWorm)return switch(monster.nextMove){
             case 1 -> "chomp";
             case 2 -> "bellow";
@@ -350,10 +397,12 @@ public class CombatOracle {
         System.out.println("TRACE\t"+String.join("\t",scenario,Integer.toString(step),phase,
         ""+player.currentHealth,""+player.currentBlock,""+com.megacrit.cardcrawl.ui.panels.EnergyPanel.totalCount,
         cards(hand,false),cards(player.drawPile.group,true),cards(player.discardPile.group,false),cards(player.exhaustPile.group,false),
-        ""+monster.currentHealth,""+monster.currentBlock,powers(player),powers(monster),""+AbstractDungeon.cardRandomRng.counter,""+AbstractDungeon.shuffleRng.counter,
+        enemyFields(m->""+m.currentHealth),enemyFields(m->""+m.currentBlock),powers(player),enemyFields(m->powers(m)),""+AbstractDungeon.cardRandomRng.counter,""+AbstractDungeon.shuffleRng.counter,
         (phase.equals("play")?"-":cards(options(),false)))
-        +(turns?"\t"+GameActionManager.turn+"\t"+moveName()
-            +"\t"+(monster.getIntentBaseDmg()<0?0:monster.getIntentDmg())+"\t"+AbstractDungeon.aiRng.counter:""));
+        +(turns?"\t"+GameActionManager.turn+"\t"+enemyFields(m->moveName(m))
+            +"\t"+enemyFields(m->""+(m.getIntentBaseDmg()<0?0:m.getIntentDmg()))+"\t"+AbstractDungeon.aiRng.counter:"")
+        +(encounter?"\t"+AbstractDungeon.monsterHpRng.counter+"\t"+enemyFields(m->""+m.maxHealth)
+            +"\t"+enemyFields(m->""+((m instanceof LouseNormal||m instanceof LouseDefensive)?m.damage.get(0).base:0)):""));
     }
     public static void main(String[] args)throws Exception {
         initialize();
@@ -362,6 +411,8 @@ public class CombatOracle {
             if(line.isBlank()||line.startsWith("#"))continue;
             String[] row=line.split("\t",-1);
             switch(row[0]){
+                case "encounter": encounter(row);
+                break;
                 case "case": reset(row);
                 break;
                 case "play":

@@ -1,0 +1,231 @@
+# encounter name combat_seed ascension enemy_list master_deck; original constructors and opening draw.
+encounter	Cultist_seed0_a0	0	0	Cultist	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	Cultist_seed0_a2	0	2	Cultist	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	Cultist_seed0_a6	0	6	Cultist	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	Cultist_seed0_a7	0	7	Cultist	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	Cultist_seed0_a17	0	17	Cultist	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	Cultist_seed0_a20	0	20	Cultist	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	Cultist_seed1_a0	1	0	Cultist	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	Cultist_seed1_a2	1	2	Cultist	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	Cultist_seed1_a6	1	6	Cultist	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	Cultist_seed1_a7	1	7	Cultist	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	Cultist_seed1_a17	1	17	Cultist	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	Cultist_seed1_a20	1	20	Cultist	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	Cultist_seed2_a0	2	0	Cultist	Strike,Defend,Bash
+end
+end
+encounter	Cultist_seed2_a2	2	2	Cultist	Strike,Defend,Bash
+end
+end
+encounter	Cultist_seed2_a6	2	6	Cultist	Strike,Defend,Bash
+end
+end
+encounter	Cultist_seed2_a7	2	7	Cultist	Strike,Defend,Bash
+end
+end
+encounter	Cultist_seed2_a17	2	17	Cultist	Strike,Defend,Bash
+end
+end
+encounter	Cultist_seed2_a20	2	20	Cultist	Strike,Defend,Bash
+end
+end
+encounter	Cultist_seed42_a0	42	0	Cultist	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	Cultist_seed42_a2	42	2	Cultist	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	Cultist_seed42_a6	42	6	Cultist	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	Cultist_seed42_a7	42	7	Cultist	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	Cultist_seed42_a17	42	17	Cultist	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	Cultist_seed42_a20	42	20	Cultist	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	Cultist_seed2147483647_a0	2147483647	0	Cultist	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	Cultist_seed2147483647_a2	2147483647	2	Cultist	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	Cultist_seed2147483647_a6	2147483647	6	Cultist	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	Cultist_seed2147483647_a7	2147483647	7	Cultist	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	Cultist_seed2147483647_a17	2147483647	17	Cultist	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	Cultist_seed2147483647_a20	2147483647	20	Cultist	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	Cultist_seed9223372036854775807_a0	9223372036854775807	0	Cultist	Strike,Defend,Bash
+end
+end
+encounter	Cultist_seed9223372036854775807_a2	9223372036854775807	2	Cultist	Strike,Defend,Bash
+end
+end
+encounter	Cultist_seed9223372036854775807_a6	9223372036854775807	6	Cultist	Strike,Defend,Bash
+end
+end
+encounter	Cultist_seed9223372036854775807_a7	9223372036854775807	7	Cultist	Strike,Defend,Bash
+end
+end
+encounter	Cultist_seed9223372036854775807_a17	9223372036854775807	17	Cultist	Strike,Defend,Bash
+end
+end
+encounter	Cultist_seed9223372036854775807_a20	9223372036854775807	20	Cultist	Strike,Defend,Bash
+end
+end
+encounter	JawWorm_seed0_a0	0	0	JawWorm	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	JawWorm_seed0_a2	0	2	JawWorm	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	JawWorm_seed0_a6	0	6	JawWorm	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	JawWorm_seed0_a7	0	7	JawWorm	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	JawWorm_seed0_a17	0	17	JawWorm	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	JawWorm_seed0_a20	0	20	JawWorm	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	JawWorm_seed1_a0	1	0	JawWorm	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	JawWorm_seed1_a2	1	2	JawWorm	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	JawWorm_seed1_a6	1	6	JawWorm	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	JawWorm_seed1_a7	1	7	JawWorm	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	JawWorm_seed1_a17	1	17	JawWorm	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	JawWorm_seed1_a20	1	20	JawWorm	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	JawWorm_seed2_a0	2	0	JawWorm	Strike,Defend,Bash
+end
+end
+encounter	JawWorm_seed2_a2	2	2	JawWorm	Strike,Defend,Bash
+end
+end
+encounter	JawWorm_seed2_a6	2	6	JawWorm	Strike,Defend,Bash
+end
+end
+encounter	JawWorm_seed2_a7	2	7	JawWorm	Strike,Defend,Bash
+end
+end
+encounter	JawWorm_seed2_a17	2	17	JawWorm	Strike,Defend,Bash
+end
+end
+encounter	JawWorm_seed2_a20	2	20	JawWorm	Strike,Defend,Bash
+end
+end
+encounter	JawWorm_seed42_a0	42	0	JawWorm	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	JawWorm_seed42_a2	42	2	JawWorm	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	JawWorm_seed42_a6	42	6	JawWorm	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	JawWorm_seed42_a7	42	7	JawWorm	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	JawWorm_seed42_a17	42	17	JawWorm	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	JawWorm_seed42_a20	42	20	JawWorm	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+end
+end
+encounter	JawWorm_seed2147483647_a0	2147483647	0	JawWorm	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	JawWorm_seed2147483647_a2	2147483647	2	JawWorm	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	JawWorm_seed2147483647_a6	2147483647	6	JawWorm	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	JawWorm_seed2147483647_a7	2147483647	7	JawWorm	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	JawWorm_seed2147483647_a17	2147483647	17	JawWorm	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	JawWorm_seed2147483647_a20	2147483647	20	JawWorm	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+end
+end
+encounter	JawWorm_seed9223372036854775807_a0	9223372036854775807	0	JawWorm	Strike,Defend,Bash
+end
+end
+encounter	JawWorm_seed9223372036854775807_a2	9223372036854775807	2	JawWorm	Strike,Defend,Bash
+end
+end
+encounter	JawWorm_seed9223372036854775807_a6	9223372036854775807	6	JawWorm	Strike,Defend,Bash
+end
+end
+encounter	JawWorm_seed9223372036854775807_a7	9223372036854775807	7	JawWorm	Strike,Defend,Bash
+end
+end
+encounter	JawWorm_seed9223372036854775807_a17	9223372036854775807	17	JawWorm	Strike,Defend,Bash
+end
+end
+encounter	JawWorm_seed9223372036854775807_a20	9223372036854775807	20	JawWorm	Strike,Defend,Bash
+end
+end
+encounter	louse_pair_seed0_a0	0	0	LouseNormal,LouseDefensive	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+encounter	louse_pair_seed0_a2	0	2	LouseNormal,LouseDefensive	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+encounter	louse_pair_seed0_a6	0	6	LouseNormal,LouseDefensive	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+encounter	louse_pair_seed0_a7	0	7	LouseNormal,LouseDefensive	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+encounter	louse_pair_seed0_a17	0	17	LouseNormal,LouseDefensive	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+encounter	louse_pair_seed0_a20	0	20	LouseNormal,LouseDefensive	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+encounter	louse_pair_seed42_a0	42	0	LouseNormal,LouseDefensive	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+encounter	louse_pair_seed42_a2	42	2	LouseNormal,LouseDefensive	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+encounter	louse_pair_seed42_a6	42	6	LouseNormal,LouseDefensive	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+encounter	louse_pair_seed42_a7	42	7	LouseNormal,LouseDefensive	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+encounter	louse_pair_seed42_a17	42	17	LouseNormal,LouseDefensive	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+encounter	louse_pair_seed42_a20	42	20	LouseNormal,LouseDefensive	Strike+,Defend+,Bash+,Anger,ShrugItOff,IronWave,TwinStrike
+encounter	empty_deck	42	0	JawWorm	-
+end
