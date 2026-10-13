@@ -77,6 +77,11 @@ public class CombatOracle {
         Gdx.gl=Gdx.gl20=proxy(GL20.class);
         Settings.language=Settings.GameLanguage.ENG;
         Settings.FAST_MODE=true;
+        Settings.UPLOAD_DATA=false;
+        Settings.seedSet=true;
+        Settings.seed=0L;
+        CardCrawlGame.publisherIntegration=proxy(com.megacrit.cardcrawl.integrations.PublisherIntegration.class);
+        CardCrawlGame.playerPref=new Prefs(){public void flush(){}};
         Settings.scale=1;
         Settings.WIDTH=1920;
         Settings.HEIGHT=1080;
@@ -115,6 +120,8 @@ public class CombatOracle {
             if(f.getType()==Texture.class)f.set(null,texture);
             if(f.getType()==BitmapFont.class)f.set(null,new BitmapFont(new BitmapFont.BitmapFontData(),new TextureRegion(texture),false));
         }
+        AbstractDungeon.dynamicBanner=new com.megacrit.cardcrawl.ui.buttons.DynamicBanner();
+        CardCrawlGame.music=new com.megacrit.cardcrawl.audio.MusicMaster();
         CardCrawlGame.sound=alloc(com.megacrit.cardcrawl.audio.SoundMaster.class);
         set(CardCrawlGame.sound,com.megacrit.cardcrawl.audio.SoundMaster.class,"map",new HashMap<>());
     }
@@ -157,6 +164,8 @@ public class CombatOracle {
     }
     static void reset(String[] row)throws Exception {
         scenario=row[1];
+        AbstractDungeon.deathScreen=null;
+        CardCrawlGame.metricData=new com.megacrit.cardcrawl.metrics.MetricData();
         encounter=false;
         AbstractDungeon.fadeColor=Color.BLACK.cpy();
         step=0;
@@ -184,6 +193,11 @@ public class CombatOracle {
         player=alloc(Ironclad.class);
         init(player);
         player.isPlayer=true;
+        player.chosenClass=AbstractPlayer.PlayerClass.IRONCLAD;
+        com.megacrit.cardcrawl.screens.stats.CharStat stats=alloc(com.megacrit.cardcrawl.screens.stats.CharStat.class);
+        set(stats,stats.getClass(),"pref",new Prefs(){public void flush(){}});
+        set(player,Ironclad.class,"charStat",stats);
+        set(player,Ironclad.class,"prefs",new Prefs(){public void flush(){}});
         player.currentHealth=player.maxHealth=80;
         player.hand=new CardGroup(CardGroup.CardGroupType.HAND);
         player.drawPile=new CardGroup(CardGroup.CardGroupType.DRAW_PILE);
@@ -328,6 +342,7 @@ public class CombatOracle {
                 player.endTurnQueued=false;
                 AbstractDungeon.getCurrRoom().endTurn();
             }
+            if(player.isDead)return;
             if(AbstractDungeon.isScreenUp)throw new IllegalStateException("unsupported turn prompt");
             if(GameActionManager.turn==before+1 && !manager.hasControl && manager.currentAction==null
                 && manager.actions.isEmpty() && manager.preTurnActions.isEmpty() && manager.cardQueue.isEmpty()
@@ -336,6 +351,8 @@ public class CombatOracle {
         throw new IllegalStateException("turn exceeded 10000 updates: "+manager.currentAction);
     }
     static String phase(){
+        if(player.isDead)return "defeat";
+        if(AbstractDungeon.getMonsters().areMonstersBasicallyDead())return "victory";
         if(!AbstractDungeon.isScreenUp)return "play";
         String name=current.getClass().getSimpleName();
         return switch(name){
@@ -398,7 +415,7 @@ public class CombatOracle {
         ""+player.currentHealth,""+player.currentBlock,""+com.megacrit.cardcrawl.ui.panels.EnergyPanel.totalCount,
         cards(hand,false),cards(player.drawPile.group,true),cards(player.discardPile.group,false),cards(player.exhaustPile.group,false),
         enemyFields(m->""+m.currentHealth),enemyFields(m->""+m.currentBlock),powers(player),enemyFields(m->powers(m)),""+AbstractDungeon.cardRandomRng.counter,""+AbstractDungeon.shuffleRng.counter,
-        (phase.equals("play")?"-":cards(options(),false)))
+        (Set.of("play","victory","defeat").contains(phase)?"-":cards(options(),false)))
         +(turns?"\t"+GameActionManager.turn+"\t"+enemyFields(m->moveName(m))
             +"\t"+enemyFields(m->""+(m.getIntentBaseDmg()<0?0:m.getIntentDmg()))+"\t"+AbstractDungeon.aiRng.counter:"")
         +(encounter?"\t"+AbstractDungeon.monsterHpRng.counter+"\t"+enemyFields(m->""+m.maxHealth)

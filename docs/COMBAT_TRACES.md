@@ -1,16 +1,17 @@
 # Executed original-bytecode combat traces
 
-The simulator now matches **530 decision-boundary snapshots** generated from the
+The simulator now matches **904 decision-boundary snapshots** generated from the
 locally installed original game JAR: 54 across 19 card-action scenarios, 46
 across eight controlled Cultist turn scenarios, 200 across 25 Act 1 Jaw Worm
-scenarios, and 230 across 85 encounter-start scenarios.
+scenarios, 230 across 85 encounter-start scenarios, and 374 across 48 complete
+Cultist/Jaw Worm fights (44 victories and four defeats).
 These expectations are produced by executing the shipped classes, not by
 transcribing the decompiled methods or recording Rust's own output.
 
-This is a controlled action/turn comparison, not a complete fight, full game-loop
-replay, or proof of whole-game parity. Selected monster constructors and opening
-draws are now executed, but untested enemies, victory/death and run progression
-remain outside this suite.
+This is a controlled combat comparison, including complete scripted fights,
+not a full game-loop replay or proof of whole-game parity. Untested enemies,
+victory room/reward processing, relics, potions and run progression remain outside
+this suite.
 
 ## Reference and execution boundary
 
@@ -21,7 +22,8 @@ remain outside this suite.
 - [java_combat.json](../tests/fixtures/java_combat.json) and
   [java_turns.json](../tests/fixtures/java_turns.json), plus
   [java_jaw_worm.json](../tests/fixtures/java_jaw_worm.json) and
-  [java_encounters.json](../tests/fixtures/java_encounters.json), record the JVM version,
+  [java_encounters.json](../tests/fixtures/java_encounters.json), and
+  [java_fights.json](../tests/fixtures/java_fights.json), record the JVM version,
   JAR hash, driver/scenario/fixture hashes, and action classes entered at each
   boundary. No game code, graphics, JARs or save files are checked in.
 
@@ -178,6 +180,9 @@ expressions. The JAR must provide the libGDX headless classes/native library.
 .venv/bin/python tools/generate_combat_fixtures.py \
   --jar /path/to/SlayTheSpire/desktop-1.0.jar --java-home /path/to/jdk \
   --scenarios tests/fixtures/encounter_scenarios.tsv --output tests/fixtures/java_encounters.tsv
+.venv/bin/python tools/generate_combat_fixtures.py \
+  --jar /path/to/SlayTheSpire/desktop-1.0.jar --java-home /path/to/jdk \
+  --scenarios tests/fixtures/fight_scenarios.tsv --output tests/fixtures/java_fights.tsv
 cargo test --locked --test java_combat_traces
 .venv/bin/python -m unittest discover -s tests -v
 ```
@@ -191,10 +196,44 @@ Inspect changed hashes and trace values before accepting a new reference build.
 Normal tests/CI only consume the committed numeric/card-state fixtures. The Rust
 test reports the scenario, step and differing field; the Python provenance test
 detects stale driver/scenario/fixture hashes. A second independent Java execution
-produced identical snapshots and metadata for all four suites. All 107 Rust tests and
-31 Python/Gym tests pass.
+produced identical snapshots and metadata for all five suites. All 110 Rust tests and
+32 Python/Gym tests pass.
 
-The next extension should follow initialized encounters through scripted card
-plays to victory or defeat, validating lethal-hit cleanup and terminal state. This suite
-provides executed combat references alongside the RNG primitive fixtures and
-source audits; it does not establish encounter-wide parity.
+The next extension should exercise multi-enemy fights: target selection, killing
+one enemy while others survive, and continuing through the remaining enemies.
+These references establish only the scripted encounters and observed fields.
+
+## Complete fights and terminal boundaries (2026-10-12)
+
+The fight suite uses real Cultist/Jaw Worm constructors and opening draws at A0
+and A17, seed 0, with the starter deck, explicit repeated-card decks, a Bash /
+Dropkick deck, a singleton Wild Strike deck, and an empty deck for defeat.
+All 48 scripts reach a terminal result. Plays and choices are fixed inputs;
+expected states are generated exclusively by the original JAR.
+
+Victory means `areMonstersBasicallyDead()` after the killing card's retained
+queued actions and `UseCardAction` cleanup finish. Monster death animations,
+`AbstractRoom.endBattle`, victory relic hooks, reward screens and deck clearing
+are not driven. Defeat stops after the original `DamageAction.update` returns
+from `AbstractPlayer.damage`, including the original `DeathScreen` constructor;
+remaining enemy actions and the next turn are not run. UI/audio remain mocked,
+statistics and preferences are initialized in memory, publisher calls are no-ops,
+metric upload is disabled, and generated run records stay in the temporary
+working directory. No combat method or death-screen method is replaced.
+
+The executed comparisons exposed and fixed:
+
+- Overkill left negative HP; damage now clamps HP at zero and returns actual HP lost.
+- Pommel Strike drew cards, Anger made a copy, Wild Strike added a Wound, and
+  Dropkick granted energy/draw after the final enemy died. The original action
+  manager cancels these effects while retaining played-card cleanup.
+- Wild Strike placed Wounds on the bottom. It now uses the original random
+  insertion position and card RNG; an empty draw pile consumes no random number.
+- Enemy next-move rolls ran after player death. They now stop at defeat, preserving
+  the current intent and RNG counter; lethal Jaw Worm Thrash also skips its queued block.
+
+Fixtures compare terminal phase, HP, powers, energy, all four card piles, intents
+and RNG counters. Additional guards require every fight to end, forbid fixture
+steps after terminal state, and check that Rust offers no actions or selection
+there. These are behavior fixes with unchanged interface v5 shapes; existing
+policies should be reevaluated because combat outcomes and RNG sequences changed.

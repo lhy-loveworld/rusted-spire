@@ -218,3 +218,14 @@ quality or game parity. No multi-seed training comparison or uncertainty
 estimate was performed. README.md now uses interface v3; these historical
 numbers and v2 checkpoints do not carry forward to the corrected simulator. Checkpoints
 and TensorBoard logs remain local, under the gitignored models/ and runs/ paths.
+
+## Complete original-bytecode fights (2026-10-12)
+
+[COMBAT_TRACES.md](COMBAT_TRACES.md) records 48 scripted Cultist/Jaw Worm fights
+from actual enemy initialization through 44 victories and four defeats, with
+374 new snapshots (904 total). They exposed negative terminal HP, uncancelled
+post-victory card effects, incorrect Wild Strike insertion/RNG, and enemy actions
+continuing after defeat. Rust now matches these traces. Defeat executes the
+original death-screen constructor in an isolated mock environment; victory stops
+after card cleanup, before room completion/rewards. This does not establish
+whole-game, multi-enemy or all-card parity. Interface v5 remains unchanged.

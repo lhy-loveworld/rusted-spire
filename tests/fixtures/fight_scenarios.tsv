@@ -1,0 +1,376 @@
+# Explicit decks, effective seed 0, A0/A17; each script starts at initialization and ends at victory or defeat.
+# No relics or potions. empty cases deliberately pass until death.
+encounter	Cultist_Strike+_a0	0	0	Cultist	Strike+,Strike+,Strike+,Strike+,Strike+,Strike+,Strike+,Strike+,Strike+,Strike+
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+play	0
+encounter	Cultist_TwinStrike+_a0	0	0	Cultist	TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+
+play	0
+play	0
+play	0
+end
+play	0
+encounter	Cultist_PommelStrike+_a0	0	0	Cultist	PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+play	0
+encounter	Cultist_Anger+_a0	0	0	Cultist	Anger+,Anger+,Anger+,Anger+,Anger+,Anger+,Anger+,Anger+,Anger+,Anger+
+play	0
+play	0
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+encounter	Cultist_Headbutt+_a0	0	0	Cultist	Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+
+play	0
+play	0
+play	0
+end
+play	0
+choose	0
+play	0
+encounter	Cultist_Bash+_a0	0	0	Cultist	Bash+,Bash+,Bash+,Bash+,Bash+,Bash+,Bash+,Bash+,Bash+,Bash+
+play	0
+end
+play	0
+end
+play	0
+end
+play	0
+encounter	Cultist_WildStrike+_a0	0	0	Cultist	WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+
+play	0
+play	0
+play	0
+end
+play	0
+encounter	Cultist_SwordBoomerang+_a0	0	0	Cultist	SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+encounter	Cultist_starter_a0	0	0	Cultist	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+play	0
+play	0
+end
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+encounter	Cultist_dropkick_a0	0	0	Cultist	Bash+,Dropkick+,Dropkick+,Dropkick+,Dropkick+,Bash+,Dropkick+,Dropkick+,Dropkick+,Dropkick+
+play	0
+play	0
+play	0
+play	0
+play	1
+encounter	Cultist_empty_a0	0	0	Cultist	-
+end
+end
+end
+end
+end
+end
+end
+encounter	Cultist_single_wild_a0	0	0	Cultist	WildStrike+
+play	0
+end
+play	1
+end
+play	1
+end
+play	2
+encounter	Cultist_Strike+_a17	0	17	Cultist	Strike+,Strike+,Strike+,Strike+,Strike+,Strike+,Strike+,Strike+,Strike+,Strike+
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+play	0
+encounter	Cultist_TwinStrike+_a17	0	17	Cultist	TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+
+play	0
+play	0
+play	0
+end
+play	0
+encounter	Cultist_PommelStrike+_a17	0	17	Cultist	PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+play	0
+encounter	Cultist_Anger+_a17	0	17	Cultist	Anger+,Anger+,Anger+,Anger+,Anger+,Anger+,Anger+,Anger+,Anger+,Anger+
+play	0
+play	0
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+encounter	Cultist_Headbutt+_a17	0	17	Cultist	Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+
+play	0
+play	0
+play	0
+end
+play	0
+choose	0
+play	0
+encounter	Cultist_Bash+_a17	0	17	Cultist	Bash+,Bash+,Bash+,Bash+,Bash+,Bash+,Bash+,Bash+,Bash+,Bash+
+play	0
+end
+play	0
+end
+play	0
+end
+play	0
+encounter	Cultist_WildStrike+_a17	0	17	Cultist	WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+
+play	0
+play	0
+play	0
+end
+play	0
+encounter	Cultist_SwordBoomerang+_a17	0	17	Cultist	SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+encounter	Cultist_starter_a17	0	17	Cultist	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+play	0
+play	0
+end
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+play	0
+end
+play	0
+encounter	Cultist_dropkick_a17	0	17	Cultist	Bash+,Dropkick+,Dropkick+,Dropkick+,Dropkick+,Bash+,Dropkick+,Dropkick+,Dropkick+,Dropkick+
+play	0
+play	0
+play	0
+play	0
+play	1
+encounter	Cultist_empty_a17	0	17	Cultist	-
+end
+end
+end
+end
+end
+end
+encounter	Cultist_single_wild_a17	0	17	Cultist	WildStrike+
+play	0
+end
+play	1
+end
+play	1
+end
+play	2
+encounter	JawWorm_Strike+_a0	0	0	JawWorm	Strike+,Strike+,Strike+,Strike+,Strike+,Strike+,Strike+,Strike+,Strike+,Strike+
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+encounter	JawWorm_TwinStrike+_a0	0	0	JawWorm	TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+
+play	0
+play	0
+play	0
+encounter	JawWorm_PommelStrike+_a0	0	0	JawWorm	PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+encounter	JawWorm_Anger+_a0	0	0	JawWorm	Anger+,Anger+,Anger+,Anger+,Anger+,Anger+,Anger+,Anger+,Anger+,Anger+
+play	0
+play	0
+play	0
+play	0
+play	0
+end
+play	0
+encounter	JawWorm_Headbutt+_a0	0	0	JawWorm	Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+
+play	0
+play	0
+play	0
+end
+play	0
+encounter	JawWorm_Bash+_a0	0	0	JawWorm	Bash+,Bash+,Bash+,Bash+,Bash+,Bash+,Bash+,Bash+,Bash+,Bash+
+play	0
+end
+play	0
+end
+play	0
+end
+play	0
+encounter	JawWorm_WildStrike+_a0	0	0	JawWorm	WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+
+play	0
+play	0
+play	0
+encounter	JawWorm_SwordBoomerang+_a0	0	0	JawWorm	SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+
+play	0
+play	0
+play	0
+end
+play	0
+encounter	JawWorm_starter_a0	0	0	JawWorm	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+play	0
+play	0
+end
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+encounter	JawWorm_dropkick_a0	0	0	JawWorm	Bash+,Dropkick+,Dropkick+,Dropkick+,Dropkick+,Bash+,Dropkick+,Dropkick+,Dropkick+,Dropkick+
+play	0
+play	0
+play	0
+play	0
+encounter	JawWorm_empty_a0	0	0	JawWorm	-
+end
+end
+end
+end
+end
+end
+end
+end
+end
+end
+encounter	JawWorm_single_wild_a0	0	0	JawWorm	WildStrike+
+play	0
+end
+play	1
+end
+play	1
+encounter	JawWorm_Strike+_a17	0	17	JawWorm	Strike+,Strike+,Strike+,Strike+,Strike+,Strike+,Strike+,Strike+,Strike+,Strike+
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+encounter	JawWorm_TwinStrike+_a17	0	17	JawWorm	TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+,TwinStrike+
+play	0
+play	0
+play	0
+end
+play	0
+encounter	JawWorm_PommelStrike+_a17	0	17	JawWorm	PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+,PommelStrike+
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+encounter	JawWorm_Anger+_a17	0	17	JawWorm	Anger+,Anger+,Anger+,Anger+,Anger+,Anger+,Anger+,Anger+,Anger+,Anger+
+play	0
+play	0
+play	0
+play	0
+play	0
+end
+play	0
+encounter	JawWorm_Headbutt+_a17	0	17	JawWorm	Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+,Headbutt+
+play	0
+play	0
+play	0
+end
+play	0
+encounter	JawWorm_Bash+_a17	0	17	JawWorm	Bash+,Bash+,Bash+,Bash+,Bash+,Bash+,Bash+,Bash+,Bash+,Bash+
+play	0
+end
+play	0
+end
+play	0
+end
+play	0
+end
+play	0
+encounter	JawWorm_WildStrike+_a17	0	17	JawWorm	WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+,WildStrike+
+play	0
+play	0
+play	0
+encounter	JawWorm_SwordBoomerang+_a17	0	17	JawWorm	SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+,SwordBoomerang+
+play	0
+play	0
+play	0
+end
+play	0
+encounter	JawWorm_starter_a17	0	17	JawWorm	Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash
+play	0
+play	0
+end
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+play	0
+end
+play	0
+play	0
+encounter	JawWorm_dropkick_a17	0	17	JawWorm	Bash+,Dropkick+,Dropkick+,Dropkick+,Dropkick+,Bash+,Dropkick+,Dropkick+,Dropkick+,Dropkick+
+play	0
+play	0
+play	0
+play	0
+encounter	JawWorm_empty_a17	0	17	JawWorm	-
+end
+end
+end
+end
+end
+end
+end
+end
+encounter	JawWorm_single_wild_a17	0	17	JawWorm	WildStrike+
+play	0
+end
+play	1
+end
+play	1
+end
+play	2

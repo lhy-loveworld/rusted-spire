@@ -1,7 +1,7 @@
 //! Recorded original-JAR action traces. No game installation is needed for CI.
 use rusted_spire::{
     card::Card,
-    combat::{step, selection_card, Action, CombatPhase, CombatState, SelectionKind},
+    combat::{step, selection_card, Action, CombatPhase, CombatResult, CombatState, SelectionKind},
     creature::CreatureState, enemy::{EnemyId, EnemyState}, power::PowerId, rng::RngBundle,
 };
 
@@ -50,7 +50,8 @@ fn snapshot(s: &CombatState, case: &str, index: usize) -> Vec<String> {
             SelectionKind::UpgradeHand => "upgrade", SelectionKind::ExhaustHand => "exhaust",
             SelectionKind::TopdeckHand => "topdeck_hand", SelectionKind::TopdeckDiscard => "topdeck_discard",
         },
-        CombatPhase::Over(_) => panic!("fixture unexpectedly ended combat"),
+        CombatPhase::Over(CombatResult::Victory) => "victory",
+        CombatPhase::Over(CombatResult::Defeat) => "defeat",
     };
     let p = &s.player;
     let choices = s.selection.as_ref().map(|c| card_list(&(0..c.indices.len())
@@ -136,6 +137,10 @@ fn compare(expected_text: &'static str, directives_text: &'static str, turns: bo
             other => panic!("unknown directive {other}"),
         }
         let s = state.as_ref().unwrap();
+        if matches!(s.phase, CombatPhase::Over(_)) {
+            assert!(rusted_spire::combat::available_actions(s).is_empty());
+            assert!(s.selection.is_none());
+        }
         let mut actual = snapshot(s, case, index);
         if turns {
             let names = enemy_fields(s, |enemy| match (enemy.id, enemy.next_move) {
@@ -192,4 +197,31 @@ fn jaw_worm_reference_covers_all_random_fallback_outcomes() {
         ("thrash", "chomp"), ("thrash", "bellow"),
         ("bellow", "chomp"), ("bellow", "thrash"),
     ]));
+}
+
+#[test]
+fn complete_fights_match_original_jar() {
+    compare(include_str!("fixtures/java_fights.tsv"), include_str!("fixtures/fight_scenarios.tsv"), true);
+}
+
+#[test]
+fn fight_reference_reaches_a_terminal_state_for_every_encounter() {
+    let mut previous: Option<Vec<&str>> = None;
+    let mut victories = 0;
+    let mut defeats = 0;
+    for line in include_str!("fixtures/java_fights.tsv").lines().filter(|l| !l.starts_with('#')) {
+        let row: Vec<_> = line.split('\t').collect();
+        if let Some(prev) = &previous {
+            if row[0] != prev[0] { assert!(["victory", "defeat"].contains(&prev[2])); }
+            else { assert!(!["victory", "defeat"].contains(&prev[2])); }
+        }
+        match row[2] {
+            "victory" => { victories += 1; assert_eq!(row[10], "0"); }
+            "defeat" => { defeats += 1; assert_eq!(row[3], "0"); }
+            _ => {}
+        }
+        previous = Some(row);
+    }
+    assert!(["victory", "defeat"].contains(&previous.unwrap()[2]));
+    assert_eq!((victories, defeats), (44, 4));
 }

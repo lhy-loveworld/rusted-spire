@@ -283,18 +283,25 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
             let base = if card.upgraded { 10 } else { 9 };
             let draw = if card.upgraded { 2 } else { 1 };
             deal_to(state, target_idx, base);
-            state.player.draw(draw, &mut state.rng.shuffle);
+            // DamageAction cancels queued draws when the final enemy dies.
+            if !all_dead(&state.enemies) { state.player.draw(draw, &mut state.rng.shuffle); }
         }
         CardId::Anger => {
             let base = if card.upgraded { 8 } else { 6 };
             let copy = card.clone();
             deal_to(state, target_idx, base);
-            state.player.discard_pile.push(copy);
+            if !all_dead(&state.enemies) { state.player.discard_pile.push(copy); }
         }
         CardId::WildStrike => {
             let base = if card.upgraded { 17 } else { 12 };
             deal_to(state, target_idx, base);
-            state.player.draw_pile.push(Card::new(CardId::Wound));
+            if !all_dead(&state.enemies) {
+                // CardGroup.addToRandomSpot excludes Java's top index; our
+                // draw pile is reversed (next card first).
+                let len = state.player.draw_pile.len();
+                let index = if len == 0 { 0 } else { len - state.rng.card.random_int((len - 1) as i32) as usize };
+                state.player.draw_pile.insert(index, Card::new(CardId::Wound));
+            }
         }
         CardId::SwordBoomerang => {
             let base = 3;
@@ -318,7 +325,7 @@ fn play_card(state: &mut CombatState, hand_idx: usize, target_idx: usize) {
             let base = if card.upgraded { 8 } else { 5 };
             let vulnerable = state.enemies[target_idx].creature.power_amount(PowerId::Vulnerable) > 0;
             deal_to(state, target_idx, base);
-            if vulnerable {
+            if vulnerable && !all_dead(&state.enemies) {
                 state.player.energy += 1;
                 state.player.draw(1, &mut state.rng.shuffle);
             }
@@ -561,10 +568,10 @@ fn end_player_turn(state: &mut CombatState) {
         let enemy_id    = state.enemies[i].id;
         let ascension   = state.enemies[i].ascension;
         state.enemies[i].take_turn(&mut state.player.creature, &mut state.rng.ai);
-        status_cards_for_move(enemy_id, queued_move, ascension, &mut state.player.discard_pile);
         if state.player.creature.is_dead() {
             return;
         }
+        status_cards_for_move(enemy_id, queued_move, ascension, &mut state.player.discard_pile);
         i += 1;
     }
 

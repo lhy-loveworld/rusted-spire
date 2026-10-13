@@ -179,7 +179,8 @@ impl EnemyState {
         execute_move(self, player_creature);
         self.move_history.push(self.next_move);
         if self.move_history.len() > 5 { self.move_history.remove(0); }
-        if !self.is_dead() {
+        // DeathScreen interrupts the action manager before queued next-move rolls.
+        if !self.is_dead() && !player_creature.is_dead() {
             match self.id {
                 // These Java takeTurn methods set the next move directly.
                 EnemyId::AcidSlimeSmall => {
@@ -508,7 +509,7 @@ fn jaw_worm_take_turn(enemy: &mut EnemyState, player: &mut CreatureState) {
         JAW_WORM_THRASH => {
             let dmg = enemy.attack_damage(player);
             crate::damage::deal_damage(dmg, &mut player.block, &mut player.hp);
-            enemy.creature.add_block(5);
+            if !player.is_dead() { enemy.creature.add_block(5); }
         }
         _ => {}
     }

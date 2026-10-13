@@ -42,7 +42,7 @@ pub fn apply_powers(
 pub fn deal_damage(damage: i32, block: &mut i32, hp: &mut i32) -> i32 {
     let absorbed = damage.min(*block);
     *block -= absorbed;
-    let hp_damage = damage - absorbed;
+    let hp_damage = (damage - absorbed).min(*hp);
     *hp -= hp_damage;
     hp_damage
 }

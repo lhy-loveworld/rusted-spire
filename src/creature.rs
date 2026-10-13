@@ -41,8 +41,9 @@ impl CreatureState {
     /// Returns HP actually lost.
     pub fn receive_damage(&mut self, damage: i32, dtype: DamageType) -> i32 {
         if dtype == DamageType::HpLoss {
-            self.hp -= damage;
-            return damage;
+            let lost = damage.min(self.hp);
+            self.hp -= lost;
+            return lost;
         }
         deal_damage(damage, &mut self.block, &mut self.hp)
     }
@@ -179,6 +180,23 @@ impl CreatureState {
         self.powers.retain(|p| p.amount() != 0);
         for (id, amt) in pending {
             self.apply_power(id, amt);
+        }
+    }
+}
+
+#[cfg(test)]
+mod lethal_tests {
+    use super::*;
+
+    #[test]
+    fn lethal_damage_clamps_hp_and_reports_only_remaining_health() {
+        for kind in [DamageType::Normal, DamageType::Thorns, DamageType::HpLoss] {
+            let mut creature = CreatureState::new(5, 5);
+            creature.block = 4;
+            assert_eq!(creature.receive_damage(20, kind), 5);
+            assert_eq!(creature.hp, 0);
+            assert_eq!(creature.block, if kind == DamageType::HpLoss { 4 } else { 0 });
+            assert_eq!(creature.receive_damage(20, kind), 0);
         }
     }
 }

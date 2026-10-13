@@ -45,9 +45,12 @@ fallback outcomes covered. Fixed missing fallback rolls, Chomp ascension damage,
 and Bellow Strength/block scaling. Encounter setup now executes real Cultist/Jaw Worm/Louse constructors and original
 opening draws across 85 cases, exposing a missing empty-shuffle RNG call on
 overdraw. Corrected draw scheduling and added card-level boundary traces.
-Total: 530 snapshots, 107 Rust tests and 31 Python/Gym tests. Next simulator
-priority: scripted fights from initialization through victory/defeat, including
-lethal-hit cleanup, before full-run expansion.
+Complete fights now add 374 snapshots across 48 Cultist/Jaw Worm cases, including
+44 victories and four defeats. Fixed lethal HP clamping, cancelled post-victory
+card effects, Wild Strike random insertion, and enemy actions after defeat.
+Total: 904 snapshots, 110 Rust tests and 32 Python/Gym tests. Next simulator
+priority: multi-enemy fights with target selection and partial kills, before
+full-run expansion.
 
 ---
 

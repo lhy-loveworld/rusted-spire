@@ -1,9 +1,9 @@
 {
-  "scope": "Original JAR bytecode for card use, queued actions, damage, powers, pile movement and choices; controlled actor setup and queue driver, mock rendering. Turn scenarios additionally execute the original action manager, room end-turn hooks and controlled Cultist or Act 1 Jaw Worm AI. Encounter scenarios execute real Cultist/Jaw Worm/Louse constructors, MonsterGroup.init, player.preBattlePrep and the room battle-start branch; player/room construction remains mocked. Not full-game parity.",
+  "scope": "Original JAR bytecode for card use, queued actions, damage, powers, pile movement and choices; controlled actor setup and queue driver, mock rendering. Turn scenarios additionally execute the original action manager, room end-turn hooks and controlled Cultist or Act 1 Jaw Worm AI. Encounter scenarios execute real Cultist/Jaw Worm/Louse constructors, MonsterGroup.init, player.preBattlePrep and the room battle-start branch; player/room construction remains mocked. Fight scenarios continue through lethal card resolution or the original player death-screen constructor; stop before victory room/reward processing. Statistics/preferences and publisher integration are isolated, telemetry is disabled, death-screen run records remain temporary. Not full-game parity.",
   "game_version": "[V2.3.4] (12-18-2022)",
   "jar_sha256": "cfad868ac8d65a88e71a0bf096fb09f78811e553effe0787c5309a655e081673",
   "java_version": "openjdk version \"21.0.12.1\" 2026-08-18\nOpenJDK Runtime Environment (build 21.0.12.1+1-1-24.04.4-Ubuntu)\nOpenJDK 64-Bit Server VM (build 21.0.12.1+1-1-24.04.4-Ubuntu, mixed mode, sharing)",
-  "harness_sha256": "06cd811f98e28cd0501d648f265c786b7d45be977bc57fa2481f37af94ff28c3",
+  "harness_sha256": "c88b93469ad3211e129ef43168b7a1b8449acd8c41aa507c759449918bcd5500",
   "scenarios_sha256": "c1ed5886574d48b000899a8210185893f28961df5a64739bb783d278cf5280de",
   "fixture_sha256": "bca6d41b63718bd2841907bb90c5d66213a343efa6ab32d220ccea729621fc2f",
   "rows": 46,
